@@ -18,6 +18,10 @@ lässt es sich direkt auf GitHub Pages hosten.
   Home-Bildschirm installierbar, offline spielbar
 - **Deutsch/Englisch**, Vierfarben-Deck, synthetische Soundeffekte (keine Audiodateien),
   Handstärke-Anzeige, Spielverlauf, Spieltempo
+- **Vorauswahl-Aktionen**: Während andere am Zug sind, kannst du schon Check/Fold, Check, Fold,
+  Call, Call Any oder Raise vormerken. Betragsgebundene Vorauswahlen verfallen, wenn sich der
+  Einsatz ändert
+- **Einsatz per Tastatur**: Zahlenfeld neben dem Slider (am Rechner direkt fokussiert, Enter setzt)
 - Turnier wird automatisch im Browser gespeichert und kann fortgesetzt werden
 - Klein und schnell: ca. 45 KB JS (gzip), keine Web-Fonts, keine Laufzeit-Abhängigkeiten außer Svelte
 

@@ -31,6 +31,8 @@ export interface PlayerView {
   holeCards: (Card | null)[];
   folded: boolean;
   allIn: boolean;
+  /** Has acted since the last full raise on this street (public information). */
+  acted: boolean;
   eliminated: boolean;
   lastAction: LastAction | null;
   isButton: boolean;
@@ -53,6 +55,8 @@ export interface TableView {
   pots: Pot[];
   potTotal: number;
   currentBet: number;
+  /** Minimum raise increment on this street (size of the last full raise). */
+  minRaise: number;
   players: PlayerView[];
   toActId: PlayerId | null;
   /** Legal actions for the viewer, if it is the viewer's turn. */
@@ -81,6 +85,7 @@ export function toView(s: TableState, viewerId: PlayerId | null): TableView {
     pots: s.pots.map((p) => ({ amount: p.amount, eligible: [...p.eligible] })),
     potTotal: potTotal(s),
     currentBet: s.currentBet,
+    minRaise: s.lastRaiseSize,
     players: s.players.map((p) => {
       const visible = p.id === viewerId || s.revealed.includes(p.id);
       return {
@@ -94,6 +99,7 @@ export function toView(s: TableState, viewerId: PlayerId | null): TableView {
         holeCards: p.holeCards.map((c) => (visible ? c : null)),
         folded: p.folded,
         allIn: p.allIn,
+        acted: p.acted,
         eliminated: p.eliminated,
         lastAction: p.lastAction ? { ...p.lastAction } : null,
         isButton: s.handNumber > 0 && p.seat === s.buttonSeat,

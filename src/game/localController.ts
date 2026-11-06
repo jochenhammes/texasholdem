@@ -90,6 +90,7 @@ export class LocalGameController implements GameController {
   }
 
   act(action: PlayerAction) {
+    if (this.disposed) return;
     const s = this.g.state;
     if (s.phase !== 'betting' || s.players[s.toAct]?.id !== HERO_ID) return;
     try {

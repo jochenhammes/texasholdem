@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { fly } from 'svelte/transition';
   import type { GameController, GameSnapshot } from '../game/types';
   import { HERO_ID } from '../game/localController';
@@ -12,6 +12,7 @@
   import SettingsPanel from './components/SettingsPanel.svelte';
   import LogList from './components/LogList.svelte';
   import type { PlayerAction } from '../engine/types';
+  import { isStillValid, resolvePreAction, type PreAction, type QueuedPreAction } from '../game/preAction';
 
   let {
     controller,
@@ -27,17 +28,70 @@
 
   $effect(() => setSoundEnabled(settings.sound));
 
+  // ── pre-selected actions ──
+  let queued = $state<QueuedPreAction | null>(null);
+  let preNotice = $state<string | null>(null);
+  let preNoticeTimer: ReturnType<typeof setTimeout> | undefined;
+  let preTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function setPreAction(a: PreAction | null) {
+    unlockAudio();
+    preNotice = null;
+    queued = a && snap ? { action: a, hand: snap.view.handNumber, street: snap.view.street } : null;
+  }
+
+  function cancelPre(withNotice: boolean) {
+    queued = null;
+    if (withNotice) {
+      preNotice = t('preCancelled');
+      clearTimeout(preNoticeTimer);
+      preNoticeTimer = setTimeout(() => (preNotice = null), 3000);
+    }
+  }
+
+  /** Returns true if a queued pre-action was fired for this snapshot. */
+  function handlePreAction(s: GameSnapshot): boolean {
+    if (!queued) return false;
+    const v = s.view;
+    if (!isStillValid(queued, v, HERO_ID)) {
+      // a changed bet on the same street is worth telling; a new street/hand is not
+      cancelPre(queued.hand === v.handNumber && queued.street === v.street && v.phase === 'betting');
+      return false;
+    }
+    if (!v.legal) return false;
+    const action = resolvePreAction(queued.action, v.legal);
+    queued = null;
+    if (!action) {
+      cancelPre(true);
+      return false;
+    }
+    // short pause so you can see your turn coming; skipped if anything changes meanwhile
+    const seq = v.seq;
+    clearTimeout(preTimer);
+    preTimer = setTimeout(() => {
+      if (snap?.view.seq === seq && snap.view.toActId === HERO_ID) controller.act(action);
+    }, 260);
+    return true;
+  }
+
   $effect(() =>
-    controller.subscribe((s) => {
-      snap = s;
-      if (s.events !== lastEvents) {
-        lastEvents = s.events;
-        react(s);
-      }
-      if (s.view.toActId === HERO_ID && lastToAct !== HERO_ID) play('turn');
-      lastToAct = s.view.toActId;
-    }),
+    untrack(() =>
+      controller.subscribe((s) => {
+        snap = s;
+        if (s.events !== lastEvents) {
+          lastEvents = s.events;
+          react(s);
+        }
+        const fired = handlePreAction(s);
+        if (!fired && s.view.toActId === HERO_ID && lastToAct !== HERO_ID) play('turn');
+        lastToAct = s.view.toActId;
+      }),
+    ),
   );
+  onDestroy(() => {
+    clearTimeout(preTimer);
+    clearTimeout(preNoticeTimer);
+  });
   onDestroy(() => clearTimeout(toastTimer));
 
   function react(s: GameSnapshot) {
@@ -68,6 +122,8 @@
 
   function act(a: PlayerAction) {
     unlockAudio();
+    queued = null;
+    clearTimeout(preTimer);
     controller.act(a);
   }
 
@@ -130,7 +186,15 @@
       {/if}
     </main>
 
-    <ActionBar {view} {thinkingName} onAct={act} />
+    <ActionBar
+      {view}
+      heroId={HERO_ID}
+      {thinkingName}
+      {queued}
+      notice={preNotice}
+      onAct={act}
+      onPreAction={setPreAction}
+    />
   </div>
 
   {#if sheet === 'menu'}
@@ -336,6 +400,9 @@
     }
     .game > :global(.dock .presets) {
       flex-wrap: wrap;
+    }
+    .game > :global(.dock .buttons.pre) {
+      grid-template-columns: 1fr 1fr;
     }
   }
 </style>
