@@ -41,7 +41,7 @@ export function newGame(setup: GameSetup): Internal {
     entrants.push({ id, name: names[i - 1], kind: 'bot' });
     personalities[id] = randomPersonality(setup.difficulty, rng);
   }
-  const state = createTournament(makeTournamentConfig(setup.startingStack, setup.blindSpeed), entrants, seed);
+  const state = createTournament(makeTournamentConfig(setup.startingStack, setup.blindSpeed, setup.startLevel ?? 0), entrants, seed);
   return { setup, state, personalities, history: [], log: [] };
 }
 

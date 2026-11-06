@@ -19,6 +19,8 @@ export const en: Record<keyof typeof de, string> = {
   diffHint_medium: 'Solid, each with their own style',
   diffHint_hard: 'Reads ranges, plays push/fold',
   startingStack: 'Starting chips',
+  startBlinds: 'Starting blinds',
+  bbDepth: '{n} BB',
   blindSpeed: 'Blind increase',
   speed_turbo: 'Turbo',
   speed_normal: 'Normal',

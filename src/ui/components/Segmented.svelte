@@ -3,10 +3,11 @@
     options,
     value,
     onChange,
-  }: { options: { value: T; label: string; sub?: string }[]; value: T; onChange: (v: T) => void } = $props();
+    compact = false,
+  }: { options: { value: T; label: string; sub?: string }[]; value: T; onChange: (v: T) => void; compact?: boolean } = $props();
 </script>
 
-<div class="seg" role="radiogroup" style="--count:{options.length}">
+<div class="seg" class:compact role="radiogroup" style="--count:{options.length}">
   {#each options as o (o.value)}
     <button role="radio" aria-checked={o.value === value} class:on={o.value === value} onclick={() => onChange(o.value)}>
       <span>{o.label}</span>
@@ -40,6 +41,17 @@
     transition:
       background-color 0.2s,
       color 0.2s;
+  }
+  button {
+    min-width: 0;
+  }
+  .compact button {
+    font-size: 0.8rem;
+    letter-spacing: -0.01em;
+    padding: 4px 0;
+  }
+  .compact small {
+    font-size: 0.64rem;
   }
   button.on {
     background: var(--text);

@@ -10,6 +10,8 @@ export interface GameSetup {
   difficulty: Difficulty;
   startingStack: number;
   blindSpeed: BlindSpeed;
+  /** Starting blind level (index into the blind structure, 0 = lowest). */
+  startLevel?: number;
 }
 
 export interface LoggedEvent {
