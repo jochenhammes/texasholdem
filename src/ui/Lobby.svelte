@@ -7,6 +7,7 @@
   import Segmented from './components/Segmented.svelte';
   import Sheet from './components/Sheet.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
+  import ThemePicker from './components/ThemePicker.svelte';
   import PlayingCard from './components/PlayingCard.svelte';
   import { makeCard } from '../engine/cards';
 
@@ -134,6 +135,11 @@
         />
       </div>
 
+      <div class="field">
+        <span class="label">{t('design')}</span>
+        <ThemePicker />
+      </div>
+
       <button class="btn primary block start" onclick={start}>{t('start')}</button>
     </section>
 
@@ -166,8 +172,8 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     background:
-      radial-gradient(80% 50% at 50% -10%, rgba(61, 220, 151, 0.14), transparent 70%),
-      radial-gradient(60% 40% at 100% 0%, rgba(139, 147, 255, 0.12), transparent 70%),
+      radial-gradient(80% 50% at 50% -10%, var(--glow-1), transparent 70%),
+      radial-gradient(60% 40% at 100% 0%, var(--glow-2), transparent 70%),
       var(--bg);
   }
   .inner {
@@ -221,8 +227,12 @@
     gap: 12px;
     padding: 16px 18px;
     text-align: left;
-    background: linear-gradient(120deg, rgba(61, 220, 151, 0.16), rgba(61, 220, 151, 0.05));
-    box-shadow: inset 0 0 0 1px rgba(61, 220, 151, 0.35);
+    background: linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      color-mix(in srgb, var(--accent) 5%, transparent)
+    );
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
   }
   .resume-text {
     display: flex;

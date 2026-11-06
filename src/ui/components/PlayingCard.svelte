@@ -58,10 +58,8 @@
     width: var(--cw);
     height: calc(var(--cw) * 1.4);
     border-radius: calc(var(--cw) * 0.12);
-    background: #fbfbfc;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.6) inset,
-      0 4px 14px rgba(0, 0, 0, 0.3);
+    background: var(--card-face);
+    box-shadow: var(--card-shadow);
     flex: none;
     overflow: hidden;
     transition:
@@ -133,16 +131,16 @@
   .back {
     background:
       repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 7px),
-      linear-gradient(150deg, #5b67f0, #3a3fb8);
+      var(--card-back);
     box-shadow:
       inset 0 0 0 calc(var(--cw) * 0.06) rgba(255, 255, 255, 0.16),
-      0 4px 14px rgba(0, 0, 0, 0.3);
+      var(--card-shadow);
   }
 
   .hl {
     box-shadow:
       0 0 0 2px var(--gold),
-      0 6px 22px rgba(246, 196, 83, 0.35);
+      0 6px 22px color-mix(in srgb, var(--gold) 35%, transparent);
     transform: translateY(-4px);
   }
   .dim {

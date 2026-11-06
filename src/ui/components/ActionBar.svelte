@@ -328,9 +328,9 @@
     box-shadow: inset 0 0 0 1px var(--line);
   }
   .chip-btn.on {
-    background: rgba(139, 147, 255, 0.18);
+    background: color-mix(in srgb, var(--raise) 18%, transparent);
     color: var(--raise);
-    box-shadow: inset 0 0 0 1px rgba(139, 147, 255, 0.5);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--raise) 50%, transparent);
   }
   .step {
     width: 40px;
@@ -366,7 +366,7 @@
     margin-top: -11px;
     border-radius: 50%;
     background: #fff;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--line-2);
   }
   input[type='range']::-moz-range-thumb {
     width: 28px;
@@ -433,12 +433,12 @@
     box-shadow: inset 0 0 0 1.5px var(--text-2);
   }
   .pre-btn.call.on {
-    background: rgba(61, 220, 151, 0.16);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
     color: var(--accent);
     box-shadow: inset 0 0 0 1.5px var(--accent);
   }
   .pre-btn.raise.on {
-    background: rgba(139, 147, 255, 0.18);
+    background: color-mix(in srgb, var(--raise) 18%, transparent);
     color: var(--raise);
     box-shadow: inset 0 0 0 1.5px var(--raise);
   }

@@ -3,9 +3,14 @@
   import { i18n, setLocale, t, type Locale } from '../../i18n/index.svelte';
   import Segmented from './Segmented.svelte';
   import Toggle from './Toggle.svelte';
+  import ThemePicker from './ThemePicker.svelte';
 </script>
 
 <div class="settings">
+  <div class="group">
+    <div class="label">{t('design')}</div>
+    <ThemePicker />
+  </div>
   <div class="group">
     <div class="label">{t('language')}</div>
     <Segmented

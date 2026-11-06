@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { describeHand } from '../../engine/evaluator';
-  import { rankOf } from '../../engine/cards';
   import type { GameSnapshot } from '../../game/types';
   import { HERO_ID } from '../../game/localController';
   import { settings } from '../../game/settings.svelte';
-  import { chips, handName, t } from '../../i18n/index.svelte';
+  import { chips, t } from '../../i18n/index.svelte';
+  import { tableInfo } from '../tableInfo';
   import PlayingCard from './PlayingCard.svelte';
   import Seat from './Seat.svelte';
   import { pop } from '../transitions';
@@ -45,37 +44,8 @@
     }),
   );
 
-  const result = $derived(view.phase === 'handComplete' || view.phase === 'tournamentComplete' ? view.lastResult : null);
-  const showdownDone = $derived(!!result?.showdown);
-  const wonBy = $derived.by(() => {
-    const m: Record<string, number> = {};
-    for (const pot of result?.pots ?? []) for (const w of pot.winners) m[w.playerId] = (m[w.playerId] ?? 0) + w.amount;
-    return m;
-  });
-  const bestCards = $derived(result?.pots[0]?.best ?? []);
-  const winnerLine = $derived.by(() => {
-    if (!result) return null;
-    const main = result.pots[0];
-    if (!main) return null;
-    const names = main.winners.map((w) => (w.playerId === HERO_ID ? t('you') : view.players.find((p) => p.id === w.playerId)?.name ?? '?'));
-    const amount = chips(main.amount);
-    const who = names.join(' & ');
-    if (main.winners.length > 1) return `${t('splitPot')} · ${who}`;
-    return main.handKey ? t('winsWith', { name: who, amount, hand: handName(main.handKey) }) : t('wins', { name: who, amount });
-  });
-
-  // Hero's current hand, e.g. "Zwei Paare"
-  const heroHint = $derived.by(() => {
-    if (!settings.handHints) return null;
-    const hero = view.players.find((p) => p.id === HERO_ID);
-    if (!hero || hero.folded || hero.eliminated || result) return null;
-    const cards = hero.holeCards.filter((c): c is number => c !== null);
-    if (cards.length < 2) return null;
-    if (view.board.length >= 3) return handName(describeHand([...cards, ...view.board]).key);
-    return rankOf(cards[0]) === rankOf(cards[1]) ? handName('pair') : null;
-  });
-
-  const potLabel = $derived(view.pots.length > 1 ? view.pots.map((p) => chips(p.amount)).join(' · ') : null);
+  const info = $derived(tableInfo(view, settings.handHints));
+  const { result, showdownDone, wonBy, bestCards, winnerLine, heroHint, potLabel } = $derived(info);
 </script>
 
 <div class="table" style="--n:{n}">

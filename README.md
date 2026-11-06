@@ -16,6 +16,8 @@ lässt es sich direkt auf GitHub Pages hosten.
   damit die UI flüssig bleibt), Pot Odds, Position, Range-Modellierung und Push/Fold bei kurzem Stack
 - **Mobile first**: Hoch- und Querformat, Safe Areas, große Touch-Ziele, als Web-App auf dem
   Home-Bildschirm installierbar, offline spielbar
+- **Zwei Designs** (Lobby → Design): dunkler Pokertisch (Standard) oder „Clean“ – hell, schlicht,
+  ohne Tisch, mit Gegner-Kacheln. Umschaltbar jederzeit, auch im Spiel über die Einstellungen
 - **Deutsch/Englisch**, Vierfarben-Deck, synthetische Soundeffekte (keine Audiodateien),
   Handstärke-Anzeige, Spielverlauf, Spieltempo
 - **Vorauswahl-Aktionen**: Während andere am Zug sind, kannst du schon Check/Fold, Check, Fold,

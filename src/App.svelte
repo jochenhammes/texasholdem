@@ -17,6 +17,14 @@
     document.documentElement.lang = i18n.locale;
   });
 
+  // Design: data-theme on <html> switches the CSS tokens (see app.css)
+  $effect(() => {
+    const root = document.documentElement;
+    if (settings.theme === 'clean') root.dataset.theme = 'clean';
+    else delete root.dataset.theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', settings.theme === 'clean' ? '#f4f5f7' : '#07090d');
+  });
+
   function start(setup: GameSetup) {
     unlockAudio();
     controller?.dispose();

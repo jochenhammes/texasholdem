@@ -1,14 +1,17 @@
 export type AnimSpeed = 'relaxed' | 'normal' | 'fast';
+/** `table`: dark poker table (default). `clean`: light, sober layout without a table. */
+export type Theme = 'table' | 'clean';
 
 export interface Settings {
   fourColor: boolean;
   sound: boolean;
   animSpeed: AnimSpeed;
   handHints: boolean;
+  theme: Theme;
 }
 
 const KEY = 'holdem.settings.v1';
-const DEFAULTS: Settings = { fourColor: false, sound: true, animSpeed: 'normal', handHints: true };
+const DEFAULTS: Settings = { fourColor: false, sound: true, animSpeed: 'normal', handHints: true, theme: 'table' };
 
 function load(): Settings {
   try {

@@ -7,6 +7,7 @@
   import { chips, t } from '../i18n/index.svelte';
   import { play, setSoundEnabled, unlockAudio } from './sound';
   import Table from './components/Table.svelte';
+  import CleanTable from './components/CleanTable.svelte';
   import ActionBar from './components/ActionBar.svelte';
   import Sheet from './components/Sheet.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
@@ -180,7 +181,11 @@
     </header>
 
     <main class="stage">
-      <Table {snap} />
+      {#if settings.theme === 'clean'}
+        <CleanTable {snap} />
+      {:else}
+        <Table {snap} />
+      {/if}
       {#if toast}
         <div class="toast" transition:fly={{ y: -16, duration: 220 }}>{toast}</div>
       {/if}

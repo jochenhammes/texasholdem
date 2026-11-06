@@ -23,6 +23,12 @@
   --gold: #f6c453;
   --danger: #ff6b6b;
 
+  --card-face: #fbfbfc;
+  --card-back: linear-gradient(150deg, #5b67f0, #3a3fb8);
+  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 4px 14px rgba(0, 0, 0, 0.3);
+  --glow-1: rgba(61, 220, 151, 0.14);
+  --glow-2: rgba(139, 147, 255, 0.12);
+
   --red: #e5484d;
   --black: #15171b;
   --blue: #2f7cf6;
@@ -48,6 +54,38 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+}
+
+/* ───── "Clean" theme: light, sober, no poker table ───── */
+:root[data-theme='clean'] {
+  color-scheme: light;
+  --bg: #f4f5f7;
+  --bg-elev: #ffffff;
+  --panel: rgba(255, 255, 255, 0.86);
+  --panel-solid: #ffffff;
+  --panel-2: rgba(15, 23, 42, 0.04);
+  --panel-3: rgba(15, 23, 42, 0.08);
+  --line: rgba(15, 23, 42, 0.08);
+  --line-2: rgba(15, 23, 42, 0.16);
+  --text: #0f172a;
+  --text-2: #475569;
+  --text-3: #8a94a6;
+
+  --accent: #0f9f6e;
+  --accent-ink: #ffffff;
+  --raise: #4f46e5;
+  --raise-ink: #ffffff;
+  --gold: #b7791f;
+  --danger: #dc2626;
+
+  --card-face: #ffffff;
+  --card-back: linear-gradient(150deg, #64748b, #475569);
+  --card-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --glow-1: transparent;
+  --glow-2: transparent;
+
+  --black: #111827;
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
 *,
