@@ -34,11 +34,20 @@ export function blindLevels(startingStack: number): BlindLevel[] {
   return BASE_LEVELS.map(([sb, bb, ante]) => ({ sb: sb * factor, bb: bb * factor, ante: ante * factor }));
 }
 
-export function makeTournamentConfig(startingStack: number, speed: BlindSpeed): TournamentConfig {
+/** How many of the first blind levels can be chosen as the starting blinds. */
+export const START_LEVEL_CHOICES = 5;
+
+/**
+ * @param startLevel index into the blind structure to start from
+ *   (0 = lowest blinds; higher = shorter, more aggressive tournament).
+ */
+export function makeTournamentConfig(startingStack: number, speed: BlindSpeed, startLevel = 0): TournamentConfig {
+  const all = blindLevels(startingStack);
+  const from = Math.max(0, Math.min(Math.floor(startLevel), START_LEVEL_CHOICES - 1));
   return {
     startingStack,
     handsPerLevel: HANDS_PER_LEVEL[speed],
-    levels: blindLevels(startingStack),
+    levels: all.slice(from),
   };
 }
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Difficulty } from '../ai/profiles';
-  import { HANDS_PER_LEVEL, STARTING_STACKS, type BlindSpeed } from '../engine/tournament';
+  import { blindLevels, HANDS_PER_LEVEL, START_LEVEL_CHOICES, STARTING_STACKS, type BlindSpeed } from '../engine/tournament';
   import { storage, type SavedGame } from '../game/storage';
   import type { GameSetup } from '../game/types';
   import { chips, t } from '../i18n/index.svelte';
@@ -36,6 +36,12 @@
   let difficulty = $state<Difficulty>(last?.difficulty ?? 'medium');
   let startingStack = $state(last?.startingStack ?? 1500);
   let blindSpeed = $state<BlindSpeed>(last?.blindSpeed ?? 'normal');
+  let startLevel = $state(last?.startLevel ?? 0);
+  const startOptions = $derived(
+    blindLevels(startingStack)
+      .slice(0, START_LEVEL_CHOICES)
+      .map((l, i) => ({ value: i, label: `${chips(l.sb)}/${chips(l.bb)}`, sub: t('bbDepth', { n: Math.round(startingStack / l.bb) }) })),
+  );
   let showSettings = $state(false);
   const stats = storage.loadStats();
 
@@ -46,7 +52,7 @@
   }
 
   function start() {
-    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed };
+    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel };
     storage.saveSetup(setup);
     onStart(setup);
   }
@@ -139,6 +145,11 @@
           value={startingStack}
           onChange={(v) => (startingStack = v)}
         />
+      </div>
+
+      <div class="field">
+        <span class="label">{t('startBlinds')}</span>
+        <Segmented compact options={startOptions} value={startLevel} onChange={(v) => (startLevel = v)} />
       </div>
 
       <div class="field">

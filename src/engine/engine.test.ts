@@ -237,3 +237,18 @@ describe('random tournaments (fuzz)', () => {
     }
   });
 });
+
+describe('starting blinds', () => {
+  it('starts the structure at the chosen level', async () => {
+    const { makeTournamentConfig } = await import('./tournament');
+    expect(makeTournamentConfig(1500, 'normal').levels[0]).toEqual({ sb: 10, bb: 20, ante: 0 });
+    const c = makeTournamentConfig(1500, 'normal', 3);
+    expect(c.levels[0]).toEqual({ sb: 50, bb: 100, ante: 0 });
+    expect(c.levels[1]).toEqual({ sb: 75, bb: 150, ante: 0 });
+    // out-of-range values are clamped
+    expect(makeTournamentConfig(1500, 'normal', 99).levels[0].bb).toBe(150);
+    const s = createTournament(c, entrants(3), 1);
+    startHand(s);
+    expect(s.players[s.bbSeat].bet).toBe(100);
+  });
+});

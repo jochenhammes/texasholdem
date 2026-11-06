@@ -17,6 +17,8 @@ export const de = {
   diffHint_medium: 'Solide mit eigenem Stil',
   diffHint_hard: 'Liest Ranges, spielt Push/Fold',
   startingStack: 'Startchips',
+  startBlinds: 'Start-Blinds',
+  bbDepth: '{n} BB',
   blindSpeed: 'Blind-Erhöhung',
   speed_turbo: 'Turbo',
   speed_normal: 'Normal',
