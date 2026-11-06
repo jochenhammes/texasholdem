@@ -24,6 +24,9 @@ lässt es sich direkt auf GitHub Pages hosten.
   Call, Call Any oder Raise vormerken. Betragsgebundene Vorauswahlen verfallen, wenn sich der
   Einsatz ändert
 - **Einsatz per Tastatur**: Zahlenfeld neben dem Slider (am Rechner direkt fokussiert, Enter setzt)
+- **Mit Freunden spielen** (optional, über Google Firebase, kostenlos): privater Tisch, Einladung per Link
+  über das Teilen-Menü oder per Code, freie Plätze füllen Bots, 30 s Bedenkzeit, Wiedereinstieg nach Neuladen.
+  Einrichtung: [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md). Ohne Konfiguration bleibt der Modus ausgeblendet.
 - Turnier wird automatisch im Browser gespeichert und kann fortgesetzt werden
 - Klein und schnell: ca. 45 KB JS (gzip), keine Web-Fonts, keine Laufzeit-Abhängigkeiten außer Svelte
 
@@ -57,7 +60,19 @@ src/
   ui/       Svelte-5-Komponenten
 ```
 
-### Vorbereitet für Multiplayer
+### Multiplayer
+
+```
+Gastgeber-Browser                       Firebase Realtime Database            Gast-Browser
+TableRunner + Engine + Bots  ── views/{uid} (nur für uid lesbar) ──►  GuestController → UI
+HostController              ◄── inbox/{uid} (Aktionen)          ────  act()
+```
+
+- `src/game/tableRunner.ts`: Spielablauf (Bots, Tempo, Bedenkzeit) – genutzt vom Einzelspieler und vom Gastgeber.
+- `src/game/mp/`: `Transport`-Schnittstelle (Firebase oder In-Memory für Tests), Raumverwaltung, Host- und Gast-Controller.
+- `firebase/database.rules.json`: Zugriffsregeln, getestet mit dem Emulator (`npm run test:rules`).
+
+### Architektur-Grundlagen
 
 Die Architektur ist so geschnitten, dass sich ein Server ergänzen lässt, ohne die UI umzubauen:
 
