@@ -44,7 +44,7 @@ export function newMultiplayerGame(setup: GameSetup, hostUid: string, members: R
   }
   // random seating
   const seated = shuffle(entrants, rng);
-  const state = createTournament(makeTournamentConfig(setup.startingStack, setup.blindSpeed), seated, seed);
+  const state = createTournament(makeTournamentConfig(setup.startingStack, setup.blindSpeed, setup.startLevel ?? 0), seated, seed);
   return { setup, state, personalities, history: [], log: [] };
 }
 

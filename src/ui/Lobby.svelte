@@ -46,15 +46,13 @@
   const stats = storage.loadStats();
 
   function currentSetup(): GameSetup {
-    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed };
+    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel };
     storage.saveSetup(setup);
     return setup;
   }
 
   function start() {
-    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel };
-    storage.saveSetup(setup);
-    onStart(setup);
+    onStart(currentSetup());
   }
 
   const savedInfo = $derived.by(() => {
