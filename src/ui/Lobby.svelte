@@ -10,12 +10,25 @@
   import ThemePicker from './components/ThemePicker.svelte';
   import PlayingCard from './components/PlayingCard.svelte';
   import { makeCard } from '../engine/cards';
+  import { multiplayerAvailable } from '../config';
+  import { normalizeCode } from '../game/mp/room';
 
   let {
     saved,
     onStart,
     onResume,
-  }: { saved: SavedGame | null; onStart: (s: GameSetup) => void; onResume: () => void } = $props();
+    onFriends,
+    onJoinCode,
+  }: {
+    saved: SavedGame | null;
+    onStart: (s: GameSetup) => void;
+    onResume: () => void;
+    onFriends: (s: GameSetup) => void;
+    onJoinCode: (code: string) => void;
+  } = $props();
+  let joinCode = $state('');
+  let showJoin = $state(false);
+  const codeValid = $derived(normalizeCode(joinCode) !== null);
 
   const last = storage.loadSetup();
   let name = $state(last?.playerName ?? '');
@@ -25,6 +38,12 @@
   let blindSpeed = $state<BlindSpeed>(last?.blindSpeed ?? 'normal');
   let showSettings = $state(false);
   const stats = storage.loadStats();
+
+  function currentSetup(): GameSetup {
+    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed };
+    storage.saveSetup(setup);
+    return setup;
+  }
 
   function start() {
     const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed };
@@ -141,6 +160,32 @@
       </div>
 
       <button class="btn primary block start" onclick={start}>{t('start')}</button>
+      {#if multiplayerAvailable}
+        <button class="btn block friends" onclick={() => onFriends(currentSetup())}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            ><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="17" cy="9" r="2.6" /><path d="M16 14.2c2.8.2 5 2.6 5 5.8" /></svg
+          >
+          {t('playWithFriends')}
+        </button>
+        {#if showJoin}
+          <div class="join-row">
+            <input
+              type="text"
+              class="code-input num"
+              bind:value={joinCode}
+              maxlength="7"
+              placeholder="K7QX92"
+              autocapitalize="characters"
+              autocomplete="off"
+              aria-label={t('roomCode')}
+              onkeydown={(e) => e.key === 'Enter' && codeValid && onJoinCode(normalizeCode(joinCode)!)}
+            />
+            <button class="btn primary" disabled={!codeValid} onclick={() => onJoinCode(normalizeCode(joinCode)!)}>{t('joinTable')}</button>
+          </div>
+        {:else}
+          <button class="link-btn" onclick={() => (showJoin = true)}>{t('joinWithCode')}</button>
+        {/if}
+      {/if}
     </section>
 
     {#if stats.tournaments > 0 || stats.handsPlayed > 0}
@@ -332,6 +377,35 @@
     min-height: 56px;
     font-size: 1.05rem;
     margin-top: 4px;
+  }
+  .friends {
+    min-height: 52px;
+    margin-top: -6px;
+  }
+  .friends svg {
+    width: 20px;
+    height: 20px;
+  }
+  .link-btn {
+    align-self: center;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-2);
+    padding: 6px 10px;
+    margin-top: -8px;
+  }
+  .join-row {
+    display: flex;
+    gap: 8px;
+    margin-top: -6px;
+  }
+  .code-input {
+    flex: 1;
+    min-width: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 700;
+    text-align: center;
   }
   .stats {
     display: grid;
