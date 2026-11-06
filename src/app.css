@@ -1,0 +1,183 @@
+:root {
+  color-scheme: dark;
+  --bg: #07090d;
+  --bg-elev: #0e1218;
+  --panel: rgba(20, 25, 33, 0.78);
+  --panel-solid: #141920;
+  --panel-2: rgba(255, 255, 255, 0.06);
+  --panel-3: rgba(255, 255, 255, 0.1);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.14);
+  --text: #f2f4f7;
+  --text-2: #a7b0bd;
+  --text-3: #6c7583;
+
+  --felt-1: #0f5641;
+  --felt-2: #0a3d2e;
+  --felt-line: rgba(255, 255, 255, 0.07);
+
+  --accent: #3ddc97;
+  --accent-ink: #04140d;
+  --raise: #8b93ff;
+  --raise-ink: #0b0d26;
+  --gold: #f6c453;
+  --danger: #ff6b6b;
+
+  --red: #e5484d;
+  --black: #15171b;
+  --blue: #2f7cf6;
+  --green: #22a565;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overscroll-behavior: none;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#app {
+  height: 100%;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--raise);
+  outline-offset: 2px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ───── shared controls ───── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  min-height: 48px;
+  padding: 0 1.1em;
+  border-radius: 14px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  background: var(--panel-3);
+  transition:
+    transform 0.12s var(--ease),
+    background-color 0.2s,
+    opacity 0.2s;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.4;
+}
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.btn.raise {
+  background: var(--raise);
+  color: var(--raise-ink);
+}
+.btn.ghost {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.btn.danger {
+  background: rgba(255, 107, 107, 0.14);
+  color: var(--danger);
+}
+.btn.block {
+  width: 100%;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--panel-2);
+  transition: background-color 0.2s;
+}
+.icon-btn:active {
+  background: var(--panel-3);
+}
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
