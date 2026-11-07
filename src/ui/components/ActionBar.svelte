@@ -13,6 +13,8 @@
     notice = null,
     onAct,
     onPreAction,
+    awaitingContinue = false,
+    onContinue,
   }: {
     view: TableView;
     heroId: PlayerId;
@@ -21,6 +23,8 @@
     notice?: string | null;
     onAct: (a: PlayerAction) => void;
     onPreAction: (a: PreAction | null) => void;
+    awaitingContinue?: boolean;
+    onContinue?: () => void;
   } = $props();
 
   /** Our turn: real legal actions. Otherwise: what we could do once it's our turn (pre-actions). */
@@ -254,6 +258,10 @@
         {#if queuedRaise !== null}<span class="num amt">{chips(queuedRaise)}</span>{/if}
       </button>
     </div>
+  {:else if awaitingContinue}
+    <div class="buttons continue">
+      <button class="btn primary" onclick={() => onContinue?.()}>{t('nextHand')}</button>
+    </div>
   {:else}
     <div class="waiting">
       {#if thinkingName}
@@ -461,6 +469,10 @@
   .amount-input:focus {
     outline: none;
     box-shadow: inset 0 0 0 2px var(--raise);
+  }
+
+  .buttons.continue {
+    grid-template-columns: 1fr;
   }
 
   .waiting {

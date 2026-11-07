@@ -7,11 +7,13 @@ export interface Settings {
   sound: boolean;
   animSpeed: AnimSpeed;
   handHints: boolean;
+  /** Stop after every showdown with the cards face up until the player continues. */
+  pauseAtShowdown: boolean;
   theme: Theme;
 }
 
 const KEY = 'holdem.settings.v1';
-const DEFAULTS: Settings = { fourColor: false, sound: true, animSpeed: 'normal', handHints: true, theme: 'table' };
+const DEFAULTS: Settings = { fourColor: false, sound: true, animSpeed: 'normal', handHints: true, theme: 'table', pauseAtShowdown: false };
 
 function load(): Settings {
   try {

@@ -82,6 +82,8 @@ export const en: Record<keyof typeof de, string> = {
   checkFold: 'Check/Fold',
   callAny: 'Call any',
   amount: 'Amount',
+  pauseAtShowdown: 'Pause after showdown',
+  nextHand: 'Continue',
   confirm: 'Confirm',
   cancel: 'Cancel',
   halfPot: '½ Pot',

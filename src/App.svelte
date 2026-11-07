@@ -11,7 +11,7 @@
   let controller = $state<GameController | null>(null);
   let saved = $state<SavedGame | null>(storage.loadGame());
 
-  const pacing = { speed: () => SPEED_FACTOR[settings.animSpeed] };
+  const pacing = { speed: () => SPEED_FACTOR[settings.animSpeed], holdAfterShowdown: () => settings.pauseAtShowdown };
 
   $effect(() => {
     document.documentElement.lang = i18n.locale;

@@ -80,6 +80,8 @@ export const de = {
   checkFold: 'Check/Fold',
   callAny: 'Call Any',
   amount: 'Betrag',
+  pauseAtShowdown: 'Pause nach Showdown',
+  nextHand: 'Weiter',
   confirm: 'Bestätigen',
   cancel: 'Abbrechen',
   halfPot: '½ Pot',

@@ -19,6 +19,8 @@ const BOT_NAMES = [
 export interface Pacing {
   /** Delay multiplier (1 = normal, < 1 = faster). Read on every step so settings apply live. */
   speed: () => number;
+  /** When true, the table stops after each showdown until `continueAfterShowdown()`. */
+  holdAfterShowdown?: () => boolean;
 }
 
 interface Internal {
@@ -56,6 +58,8 @@ export class LocalGameController implements GameController {
   private disposed = false;
   private paused = false;
   private resumeGate: (() => void) | null = null;
+  private continueGate: (() => void) | null = null;
+  private awaitingContinue = false;
   private spectating = false;
   private logId = 0;
   private rng = seedRng(randomSeed());
@@ -120,8 +124,14 @@ export class LocalGameController implements GameController {
     this.run();
   }
 
+  continueAfterShowdown() {
+    this.continueGate?.();
+    this.continueGate = null;
+  }
+
   dispose() {
     this.disposed = true;
+    this.continueGate?.();
     for (const t of this.timers) clearTimeout(t);
     this.timers.clear();
     this.resumeGate?.();
@@ -149,7 +159,15 @@ export class LocalGameController implements GameController {
           if (p.kind === 'human') break; // wait for act()
           await this.botTurn(p);
         } else {
+          if (this.shouldHold(s)) {
+            await this.holdForContinue();
+            if (this.disposed) break;
+            this.apply(advance(this.g.state));
+            continue;
+          }
           await this.sleep(this.delayFor(s));
+          // the mode may have been switched on while we were waiting
+          if (!this.disposed && this.shouldHold(this.g.state)) continue;
           if (this.disposed) break;
           await this.waitIfPaused();
           if (this.g.state.phase === 'tournamentComplete') break;
@@ -159,6 +177,22 @@ export class LocalGameController implements GameController {
     } finally {
       this.running = false;
     }
+  }
+
+  /** Showdown finished with cards face up and the player wants to look at them. */
+  private shouldHold(s: TableState): boolean {
+    return s.phase === 'handComplete' && !!s.lastResult?.showdown && !!this.pacing.holdAfterShowdown?.();
+  }
+
+  private holdForContinue() {
+    this.awaitingContinue = true;
+    this.emit();
+    return new Promise<void>((resolve) => {
+      this.continueGate = () => {
+        this.awaitingContinue = false;
+        resolve();
+      };
+    });
   }
 
   private fastFactor(): number {
@@ -270,6 +304,7 @@ export class LocalGameController implements GameController {
       spectating: this.spectating,
       paused: this.paused,
       personalities: this.g.personalities,
+      awaitingContinue: this.awaitingContinue,
     };
   }
 

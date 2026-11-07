@@ -34,6 +34,8 @@ export interface GameSnapshot {
   spectating: boolean;
   paused: boolean;
   personalities: Record<PlayerId, Personality>;
+  /** The table stopped after a showdown and waits for `continueAfterShowdown()`. */
+  awaitingContinue: boolean;
 }
 
 /**
@@ -49,5 +51,7 @@ export interface GameController {
   setPaused(paused: boolean): void;
   /** Keep watching the bots after the human busted out. */
   spectate(): void;
+  /** Continue after a paused showdown. */
+  continueAfterShowdown(): void;
   dispose(): void;
 }
