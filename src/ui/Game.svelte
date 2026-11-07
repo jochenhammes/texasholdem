@@ -2,7 +2,7 @@
   import { onDestroy, untrack } from 'svelte';
   import { fly } from 'svelte/transition';
   import type { GameController, GameSnapshot } from '../game/types';
-  import { settings, updateSettings } from '../game/settings.svelte';
+  import { settings } from '../game/settings.svelte';
   import { chips, t } from '../i18n/index.svelte';
   import { play, setSoundEnabled, unlockAudio } from './sound';
   import Table from './components/Table.svelte';
@@ -215,16 +215,6 @@
       {#if toast}
         <div class="toast" transition:fly={{ y: -16, duration: 220 }}>{toast}</div>
       {/if}
-      {#if !mp}
-      <label class="showdown-toggle">
-        <input
-          type="checkbox"
-          checked={settings.pauseAtShowdown}
-          onchange={(e) => updateSettings({ pauseAtShowdown: e.currentTarget.checked })}
-        />
-        <span>{t('pauseAtShowdown')}</span>
-      </label>
-      {/if}
     </main>
 
     <ActionBar
@@ -370,31 +360,6 @@
   .banner .btn {
     min-height: 36px;
     font-size: 0.85rem;
-  }
-  .showdown-toggle {
-    position: absolute;
-    right: calc(10px + var(--safe-r));
-    bottom: 8px;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 10px 5px 8px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--text-2);
-    background: var(--panel);
-    box-shadow: inset 0 0 0 1px var(--line);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .showdown-toggle input {
-    width: 15px;
-    height: 15px;
-    margin: 0;
-    accent-color: var(--accent);
-    cursor: pointer;
   }
   .toast {
     position: absolute;

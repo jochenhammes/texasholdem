@@ -180,7 +180,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 4px calc(12px + var(--safe-r)) 44px calc(12px + var(--safe-l));
+    padding: 4px calc(12px + var(--safe-r)) 12px calc(12px + var(--safe-l));
     overflow-y: auto;
     width: min(1100px, 100%);
     margin: 0 auto;

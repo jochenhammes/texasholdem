@@ -108,6 +108,7 @@ export const de = {
   leaveTableConfirm: 'Tisch verlassen? Deine Hände werden automatisch gecheckt/gefoldet.',
   back: 'Zurück',
   pauseAtShowdown: 'Pause nach Showdown',
+  pauseAtShowdownHint: 'Offene Karten in Ruhe ansehen, weiter mit „Weiter“',
   nextHand: 'Weiter',
   confirm: 'Bestätigen',
   cancel: 'Abbrechen',
