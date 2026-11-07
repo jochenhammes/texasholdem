@@ -81,6 +81,7 @@ export const de = {
   callAny: 'Call Any',
   amount: 'Betrag',
   pauseAtShowdown: 'Pause nach Showdown',
+  pauseAtShowdownHint: 'Offene Karten in Ruhe ansehen, weiter mit „Weiter“',
   nextHand: 'Weiter',
   confirm: 'Bestätigen',
   cancel: 'Abbrechen',

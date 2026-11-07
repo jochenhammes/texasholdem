@@ -83,6 +83,7 @@ export const en: Record<keyof typeof de, string> = {
   callAny: 'Call any',
   amount: 'Amount',
   pauseAtShowdown: 'Pause after showdown',
+  pauseAtShowdownHint: 'Look at the revealed cards, then tap “Continue”',
   nextHand: 'Continue',
   confirm: 'Confirm',
   cancel: 'Cancel',

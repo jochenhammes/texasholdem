@@ -13,7 +13,7 @@ export interface Settings {
 }
 
 const KEY = 'holdem.settings.v1';
-const DEFAULTS: Settings = { fourColor: false, sound: true, animSpeed: 'normal', handHints: true, theme: 'table', pauseAtShowdown: false };
+const DEFAULTS: Settings = { fourColor: false, sound: true, animSpeed: 'normal', handHints: true, theme: 'table', pauseAtShowdown: true };
 
 function load(): Settings {
   try {

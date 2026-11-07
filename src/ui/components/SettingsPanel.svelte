@@ -43,6 +43,12 @@
       onChange={(v) => updateSettings({ fourColor: v })}
     />
     <Toggle
+      checked={settings.pauseAtShowdown}
+      label={t('pauseAtShowdown')}
+      hint={t('pauseAtShowdownHint')}
+      onChange={(v) => updateSettings({ pauseAtShowdown: v })}
+    />
+    <Toggle
       checked={settings.handHints}
       label={t('handHints')}
       hint={t('handHintsHint')}
