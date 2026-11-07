@@ -20,7 +20,7 @@
   const invited = multiplayerAvailable ? roomFromHash() : null;
   let room = $state<RoomMode | null>(invited ? { kind: 'join', code: invited } : null);
 
-  const pacing = { speed: () => SPEED_FACTOR[settings.animSpeed] };
+  const pacing = { speed: () => SPEED_FACTOR[settings.animSpeed], holdAfterShowdown: () => settings.pauseAtShowdown };
 
   $effect(() => {
     document.documentElement.lang = i18n.locale;

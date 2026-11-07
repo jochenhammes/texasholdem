@@ -31,6 +31,8 @@ export interface RunnerOptions {
   turnTimeMs?: number | null;
   /** Disconnected players act (check/fold) almost immediately. */
   isAway?: (playerId: PlayerId) => boolean;
+  /** When true, the table stops after each showdown until `continueAfterShowdown()`. */
+  holdAfterShowdown?: () => boolean;
   /** Return true to hold the loop (e.g. local player busted and not spectating). */
   shouldHold?: () => boolean;
   /** Called after every state change, after history/log were updated. */
@@ -52,6 +54,9 @@ export class TableRunner {
   thinkingId: PlayerId | null = null;
   turn: TurnInfo | null = null;
   paused = false;
+  /** Stopped after a showdown, waiting for `continueAfterShowdown()`. */
+  awaitingContinue = false;
+  private continueGate: (() => void) | null = null;
 
   private profiles = new Map<string, BotProfile>();
   private running = false;
@@ -110,8 +115,14 @@ export class TableRunner {
     void this.run();
   }
 
+  continueAfterShowdown() {
+    this.continueGate?.();
+    this.continueGate = null;
+  }
+
   dispose() {
     this.disposed = true;
+    this.continueGate?.();
     for (const t of this.timers) clearTimeout(t);
     this.timers.clear();
     this.clearTurn();
@@ -137,8 +148,16 @@ export class TableRunner {
           }
           await this.botTurn(p);
         } else {
+          if (this.shouldHoldAfterShowdown(s)) {
+            await this.holdForContinue();
+            if (this.disposed) break;
+            this.apply(advance(this.g.state));
+            continue;
+          }
           await this.sleep(this.delayFor(s));
           if (this.disposed) break;
+          // the mode may have been switched on while we were waiting
+          if (this.shouldHoldAfterShowdown(this.g.state)) continue;
           await this.waitIfPaused();
           if (this.g.state.phase === 'tournamentComplete' || this.g.state.phase === 'betting') continue;
           this.apply(advance(this.g.state));
@@ -147,6 +166,21 @@ export class TableRunner {
     } finally {
       this.running = false;
     }
+  }
+
+  private shouldHoldAfterShowdown(s: TableState): boolean {
+    return s.phase === 'handComplete' && !!s.lastResult?.showdown && !!this.opts.holdAfterShowdown?.();
+  }
+
+  private holdForContinue() {
+    this.awaitingContinue = true;
+    this.opts.onUpdate();
+    return new Promise<void>((resolve) => {
+      this.continueGate = () => {
+        this.awaitingContinue = false;
+        resolve();
+      };
+    });
   }
 
   private scheduleTurn(playerId: PlayerId) {

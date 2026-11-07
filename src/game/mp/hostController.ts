@@ -150,6 +150,9 @@ export class HostController implements GameController {
   /** The table keeps running for the guests – the menu does not pause multiplayer. */
   setPaused() {}
 
+  /** No showdown pause at shared tables – it would stop everybody. */
+  continueAfterShowdown() {}
+
   spectate() {
     this.spectating = true;
     this.emit();
@@ -242,6 +245,7 @@ export class HostController implements GameController {
       personalities: this.data.personalities,
       turn: turn ? { playerId: turn.playerId, deadline: turn.deadline } : null,
       multiplayer: { room: this.room, isHost: true },
+      awaitingContinue: false,
     };
   }
 

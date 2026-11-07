@@ -19,6 +19,8 @@ export const BOT_NAMES = [
 export interface Pacing {
   /** Delay multiplier (1 = normal, < 1 = faster). Read on every step so settings apply live. */
   speed: () => number;
+  /** When true, the table stops after each showdown until `continueAfterShowdown()`. */
+  holdAfterShowdown?: () => boolean;
 }
 
 interface Internal extends GameData {
@@ -64,6 +66,7 @@ export class LocalGameController implements GameController {
       speed: pacing.speed,
       fastFactor: () => (this.hero.eliminated ? 0.45 : this.hero.folded ? 0.6 : 1),
       turnTimeMs: null,
+      holdAfterShowdown: pacing.holdAfterShowdown,
       shouldHold: () => this.hero.eliminated && !this.spectating,
       onEvents: (events) => this.onEvents(events),
       onUpdate: () => this.emit(),
@@ -84,6 +87,10 @@ export class LocalGameController implements GameController {
 
   setPaused(paused: boolean) {
     this.runner.setPaused(paused);
+  }
+
+  continueAfterShowdown() {
+    this.runner.continueAfterShowdown();
   }
 
   spectate() {
@@ -159,6 +166,7 @@ export class LocalGameController implements GameController {
       personalities: this.g.personalities,
       turn: null,
       multiplayer: null,
+      awaitingContinue: this.runner.awaitingContinue,
     };
   }
 

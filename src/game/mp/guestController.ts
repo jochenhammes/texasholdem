@@ -57,6 +57,9 @@ export class GuestController implements GameController {
 
   setPaused() {}
 
+  /** No showdown pause at shared tables – it would stop everybody. */
+  continueAfterShowdown() {}
+
   spectate() {
     this.spectating = true;
     this.rebuild();
@@ -117,6 +120,7 @@ export class GuestController implements GameController {
       hostAway: this.hostAway && !this.closed,
       closed: this.closed,
       multiplayer: { room: this.room, isHost: false },
+      awaitingContinue: false,
     };
     for (const l of this.listeners) l(this.snap);
   }

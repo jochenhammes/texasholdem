@@ -107,6 +107,8 @@ export const de = {
   leaveTable: 'Tisch verlassen',
   leaveTableConfirm: 'Tisch verlassen? Deine Hände werden automatisch gecheckt/gefoldet.',
   back: 'Zurück',
+  pauseAtShowdown: 'Pause nach Showdown',
+  nextHand: 'Weiter',
   confirm: 'Bestätigen',
   cancel: 'Abbrechen',
   halfPot: '½ Pot',

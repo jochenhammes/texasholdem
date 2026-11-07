@@ -109,6 +109,8 @@ export const en: Record<keyof typeof de, string> = {
   leaveTable: 'Leave table',
   leaveTableConfirm: 'Leave the table? Your hands will be checked/folded automatically.',
   back: 'Back',
+  pauseAtShowdown: 'Pause after showdown',
+  nextHand: 'Continue',
   confirm: 'Confirm',
   cancel: 'Cancel',
   halfPot: '½ Pot',
