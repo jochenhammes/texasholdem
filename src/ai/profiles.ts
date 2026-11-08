@@ -26,19 +26,14 @@ export interface BotProfile {
   slowplay: number;
 }
 
+/**
+ * Three levels:
+ *  - easy   – solid threshold bots with distinct personalities (and mistakes)
+ *  - medium – range-aware threshold bots, push/fold when short
+ *  - hard   – the range/EV engine in expert.ts, adapting to observed opponents
+ */
 const BASE: Record<Difficulty, Omit<BotProfile, 'personality' | 'difficulty'>> = {
   easy: {
-    iterations: 200,
-    noise: 0.14,
-    rangeAwareness: 0,
-    tightness: 0,
-    aggression: 0.4,
-    bluff: 0.05,
-    callMargin: -0.06,
-    pushFold: false,
-    slowplay: 0,
-  },
-  medium: {
     iterations: 500,
     noise: 0.07,
     rangeAwareness: 0.5,
@@ -49,7 +44,7 @@ const BASE: Record<Difficulty, Omit<BotProfile, 'personality' | 'difficulty'>> =
     pushFold: true,
     slowplay: 0.08,
   },
-  hard: {
+  medium: {
     iterations: 1200,
     noise: 0.03,
     rangeAwareness: 1,
@@ -59,6 +54,18 @@ const BASE: Record<Difficulty, Omit<BotProfile, 'personality' | 'difficulty'>> =
     callMargin: 0.02,
     pushFold: true,
     slowplay: 0.15,
+  },
+  // iterations = Monte Carlo budget per decision of the expert engine
+  hard: {
+    iterations: 5000,
+    noise: 0,
+    rangeAwareness: 1,
+    tightness: 0,
+    aggression: 0.8,
+    bluff: 0.1,
+    callMargin: 0,
+    pushFold: true,
+    slowplay: 0.1,
   },
 };
 
@@ -71,9 +78,9 @@ const STYLE: Record<Personality, { tight: number; aggr: number; bluff: number; c
 };
 
 const POOLS: Record<Difficulty, Personality[]> = {
-  easy: ['station', 'maniac', 'rock', 'station', 'lag'],
-  medium: ['rock', 'tag', 'lag', 'station', 'maniac', 'tag'],
-  hard: ['tag', 'lag', 'tag', 'rock', 'lag'],
+  easy: ['rock', 'tag', 'lag', 'station', 'maniac', 'tag'],
+  medium: ['tag', 'lag', 'tag', 'rock', 'lag'],
+  hard: ['tag'],
 };
 
 export function makeProfile(difficulty: Difficulty, personality: Personality): BotProfile {

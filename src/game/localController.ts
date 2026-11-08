@@ -60,6 +60,7 @@ export class LocalGameController implements GameController {
       history: game.history ?? [],
       log: game.log ?? [],
       statsRecorded: game.statsRecorded,
+      oppStats: game.oppStats ?? {},
     };
     this.runner = new TableRunner(this.g, {
       decideBot: (input) => this.bots.decide(input),
@@ -151,6 +152,7 @@ export class LocalGameController implements GameController {
       history: this.g.history,
       log: this.g.log.slice(-150),
       statsRecorded: this.g.statsRecorded,
+      oppStats: this.g.oppStats,
     });
   }
 

@@ -20,6 +20,7 @@ export interface SavedGame {
   history: HandAction[];
   log: LoggedEvent[];
   statsRecorded?: boolean;
+  oppStats?: import('../ai/opponentStats').StatsTable;
 }
 
 export interface Stats {

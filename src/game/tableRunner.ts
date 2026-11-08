@@ -5,6 +5,7 @@ import { nextFloat, nextInt, randomSeed, seedRng } from '../engine/rng';
 import type { GameEvent, PlayerAction, PlayerId, PlayerKind, SeatPlayer, TableState } from '../engine/types';
 import { toView } from '../engine/view';
 import type { GameSetup, LoggedEvent } from './types';
+import { trackStats, type StatsTable } from '../ai/opponentStats';
 
 /** Everything needed to continue a game (JSON-serializable). */
 export interface GameData {
@@ -13,6 +14,8 @@ export interface GameData {
   personalities: Record<string, Personality>;
   history: HandAction[];
   log: LoggedEvent[];
+  /** What each player has shown this tournament (read by the "Schwer" bots). */
+  oppStats?: StatsTable;
 }
 
 export interface TurnInfo {
@@ -66,6 +69,7 @@ export class TableRunner {
   private rng = seedRng(randomSeed());
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private turnTimer: ReturnType<typeof setTimeout> | null = null;
+  private perHand = { vpip: new Set<string>(), pfr: new Set<string>() };
 
   constructor(
     readonly g: GameData,
@@ -236,7 +240,13 @@ export class TableRunner {
     const profile = this.profiles.get(p.id) ?? makeProfile(this.g.setup.difficulty, 'tag');
     const minThink = (450 + nextFloat(this.rng) * 900) * this.opts.speed() * (this.opts.fastFactor?.() ?? 1);
     const [action] = await Promise.all([
-      this.opts.decideBot({ view: toView(s, p.id), profile, history: this.g.history, seed: nextInt(this.rng, 2 ** 31) }),
+      this.opts.decideBot({
+        view: toView(s, p.id),
+        profile,
+        history: this.g.history,
+        seed: nextInt(this.rng, 2 ** 31),
+        stats: this.g.oppStats,
+      }),
       this.sleep(minThink),
     ]);
     if (this.disposed) return;
@@ -254,10 +264,11 @@ export class TableRunner {
     const s = this.g.state;
     for (const e of events) {
       if (e.type === 'handStart') this.g.history = [];
-      if (e.type === 'action') this.g.history.push({ playerId: e.playerId, street: s.street, type: e.action.type });
+      if (e.type === 'action') this.g.history.push({ playerId: e.playerId, street: s.street, type: e.action.type, amount: e.action.amount });
       if (e.type !== 'dealHole') this.g.log.push({ id: ++this.logId, hand: s.handNumber, event: e });
     }
     if (this.g.log.length > 400) this.g.log.splice(0, this.g.log.length - 400);
+    trackStats((this.g.oppStats ??= {}), events, s.street, () => s.players.filter((p) => !p.eliminated).map((p) => p.id), this.perHand);
     this.opts.onEvents(events);
   }
 
