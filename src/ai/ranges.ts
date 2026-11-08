@@ -183,10 +183,16 @@ const LIKELIHOOD: Record<'bet' | 'raise' | 'call' | 'check', number[]> = {
 };
 
 /** Bayesian-style narrowing after a post-flop action on the given board. */
-export function applyPostflopAction(r: Range, board: Card[], type: string, softness = POSTFLOP_SOFTNESS) {
+export function applyPostflopAction(r: Range, board: Card[], type: string, softness = POSTFLOP_SOFTNESS, laterStreets = true) {
   const kind = type === 'bet' ? 'bet' : type === 'raise' || type === 'allin' ? 'raise' : type === 'call' ? 'call' : type === 'check' ? 'check' : null;
   if (!kind) return;
   const lk = LIKELIHOOD[kind].map((x) => Math.max(POSTFLOP_FLOOR, Math.pow(x, softness)));
+  // later-street bets and raises are bluffs far less often than flop bets
+  if (laterStreets && (kind === 'bet' || kind === 'raise')) {
+    const later = board.length >= 5 ? 0.6 : board.length === 4 ? 0.8 : 1;
+    lk[0] *= later; // air
+    lk[1] *= later; // weak pair
+  }
   const river = board.length >= 5;
   for (let k = 0; k < COMBO_COUNT; k++) {
     if (r[k] <= 0) continue;

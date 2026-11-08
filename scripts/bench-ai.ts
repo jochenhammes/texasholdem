@@ -17,7 +17,7 @@ import type { StatsTable } from '../src/ai/opponentStats';
 
 const [lineup = 'hard-vs-medium', nArg = '50', seedArg = '1'] = process.argv.slice(2);
 const N = Number(nArg);
-const SEATS = 6;
+const SEATS = Number(process.env.SEATS ?? 6);
 
 function players(): { label: string; profile: BotProfile }[] {
   const [hero, , field] = lineup.split('-');

@@ -37,6 +37,20 @@ const TUNE = {
   risk: 0.08,
   /** Adapt pre-flop opening/3-bet ranges to observed opponents (1 = on). */
   adapt: 1,
+  /** Value of checking (check-raise, pot control) for the out-of-position player without initiative, × pot. */
+  donk: 0.08,
+  /** One bet size per street for value and bluffs alike – sizes reveal nothing (1 = on). */
+  fixedSizes: 1,
+  /** Assume tighter ranges for all-in shoves before calling them (1 = on). */
+  strictShove: 1,
+  /** Heads-up: the button raises more instead of limping (1 = on). */
+  huOpen: 1,
+  /** Lower bound for how much an aggressive player's bets still say about their hand (× default). */
+  minSoft: 0.75,
+  /** Raise size facing a bet, as a multiple of that bet (fixed sizing mode). */
+  raiseX: 3,
+  /** Fewer bluffs assumed in turn/river bets (1 = on). */
+  later: 1,
   /** Equity realisation out of position. */
   oop: 0.9,
   ...((globalThis as { __expertTune?: Record<string, number> }).__expertTune ?? {}),
@@ -52,7 +66,7 @@ function readsOf(c: Ctx, id: PlayerId) {
     widenRaise: clamp(t.pfr / DEFAULT_TENDENCIES.pfr, 0.6, 4),
     widenCall: clamp(t.vpip / DEFAULT_TENDENCIES.vpip, 0.6, 3.5),
     // very aggressive players' bets say little about their hand
-    softness: Math.min(1, POSTFLOP_SOFTNESS * clamp(DEFAULT_TENDENCIES.af / t.af, 0.35, 1.6)),
+    softness: Math.min(1, POSTFLOP_SOFTNESS * clamp(DEFAULT_TENDENCIES.af / t.af, TUNE.minSoft, 1.6)),
     // players who rarely fold get bluffed less
     defence: clamp((DEFENCE * (1 - t.foldToBet)) / (1 - DEFAULT_TENDENCIES.foldToBet), 0.7, 2.2),
   };
@@ -194,14 +208,14 @@ function preflopContexts(c: Ctx): Map<PlayerId, PreflopActionCtx[]> {
   return out;
 }
 
-function rangeOf(c: Ctx, p: PlayerView, pre: Map<PlayerId, PreflopActionCtx[]>): Range {
+function rangeOf(c: Ctx, p: PlayerView, pre: Map<PlayerId, PreflopActionCtx[]>, floor = PREFLOP_FLOOR): Range {
   const reads = readsOf(c, p.id);
   const widen = (ctx: PreflopActionCtx) => (ctx.type === 'call' || ctx.type === 'check' ? reads.widenCall : reads.widenRaise);
   const r = removeCards(fullRange(), [...c.hero, ...c.board]);
-  for (const ctx of pre.get(p.id) ?? []) shapeByPct(r, preflopActionWeight(ctx, widen(ctx)), PREFLOP_FLOOR);
+  for (const ctx of pre.get(p.id) ?? []) shapeByPct(r, preflopActionWeight(ctx, widen(ctx)), floor);
   for (const h of c.history) {
     if (h.playerId !== p.id || h.street === 'preflop') continue;
-    applyPostflopAction(r, c.board.slice(0, BOARD_LEN[h.street]), h.type, reads.softness);
+    applyPostflopAction(r, c.board.slice(0, BOARD_LEN[h.street]), h.type, reads.softness, !!TUNE.later);
   }
   // keep something sensible if the player did something our model considers impossible
   if (totalWeight(r) < 0.5) {
@@ -337,7 +351,9 @@ function preflop(c: Ctx): BotDecision {
   if (raises >= 1 && C > 0) {
     const last = aggressors[aggressors.length - 1];
     const raiser = c.opponents.find((o) => o.id === last?.playerId) ?? c.opponents[0];
-    const rRange = rangeOf(c, raiser, pre);
+    // an all-in rarely comes from trash – don't let the "anything is possible" floor flatter our calls
+    const shoveFacing = raiser.allIn || C >= 0.6 * me.stack;
+    const rRange = rangeOf(c, raiser, pre, TUNE.strictShove && shoveFacing ? 0.02 : PREFLOP_FLOOR);
     const eq = equityVs(hero, [], [rRange], Math.round(c.budget * 0.7), rng);
     const R = C >= me.stack ? 1 : inPosition ? 0.95 : 0.85;
     const evCall = R * eq * (P + C) - C;
@@ -385,7 +401,7 @@ function preflop(c: Ctx): BotDecision {
     : DEFAULT_TENDENCIES.vpip;
   const steal = TUNE.adapt ? clamp(DEFAULT_TENDENCIES.vpip / vpipBehind, 0.75, 1.8) : 1;
   let top = Math.min(0.85, openPct(behind) * steal) * (limpers ? 0.7 : 1) * (me.isSmallBlind && behind === 1 ? 1.15 : 1);
-  if (me.isSmallBlind && behind === 1) top = Math.max(top, 0.45);
+  if (me.isSmallBlind && behind === 1) top = Math.max(top, TUNE.huOpen && c.opponents.length === 1 ? 0.62 : 0.45);
   const edge = 0.03;
   const pOpen = pct <= top - edge ? 1 : pct >= top + edge ? 0 : (top + edge - pct) / (2 * edge);
   if (l.canRaise && nextFloat(rng) < pOpen) {
@@ -430,7 +446,12 @@ function postflop(c: Ctx): BotDecision {
 
   const cands: Candidate[] = [];
   const implied = !river && mine.draw >= 2 ? 0.08 * Math.min(P, me.stack) : 0;
-  if (l.canCheck) cands.push({ action: { type: 'check' }, ev: R * eqNow * P });
+  // who took the betting lead on the previous streets?
+  const lastAggr = [...c.history].reverse().find((h) => h.street !== view.street && (h.type === 'bet' || h.type === 'raise' || h.type === 'allin'));
+  const initiative = lastAggr?.playerId === me.id;
+  const firstToAct = !c.history.some((h) => h.street === view.street);
+  const checkBonus = !initiative && !inPosition && firstToAct ? TUNE.donk * P : 0;
+  if (l.canCheck) cands.push({ action: { type: 'check' }, ev: R * eqNow * P + checkBonus });
   else {
     cands.push({ action: { type: 'fold' }, ev: 0 });
     const allInCall = C >= me.stack;
@@ -439,7 +460,12 @@ function postflop(c: Ctx): BotDecision {
 
   if (l.canRaise) {
     const targets = new Set<number>();
-    if (C === 0) for (const f of [0.33, 0.66, 1]) targets.add(f * P);
+    if (TUNE.fixedSizes) {
+      // one size per street for every hand: the size tells the opponent nothing
+      const frac = board.length === 3 ? 0.45 : board.length === 4 ? 0.66 : 0.75;
+      if (C === 0) targets.add(frac * P);
+      else targets.add(TUNE.raiseX ? TUNE.raiseX * view.currentBet : view.currentBet + 0.9 * (P + C));
+    } else if (C === 0) for (const f of [0.33, 0.66, 1]) targets.add(f * P);
     else for (const f of [0.75, 1.1]) targets.add(view.currentBet + f * (P + C));
     targets.add(l.maxRaiseTo);
     const seen = new Set<number>();
