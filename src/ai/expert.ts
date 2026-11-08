@@ -35,6 +35,8 @@ const TUNE = {
   temp: 0.01,
   /** Extra EV required per chip when risking a big part of the stack (tournament survival). */
   risk: 0.08,
+  /** Adapt pre-flop opening/3-bet ranges to observed opponents (1 = on). */
+  adapt: 1,
   /** Equity realisation out of position. */
   oop: 0.9,
   ...((globalThis as { __expertTune?: Record<string, number> }).__expertTune ?? {}),
@@ -356,7 +358,9 @@ function preflop(c: Ctx): BotDecision {
     } else if (l.canRaise) {
       // deep: value 3-/4-bets from the top of the range, a few bluffs from suited hands in position
       const suited = (hero[0] & 3) === (hero[1] & 3);
-      const valueTop = raises === 1 ? (inPosition ? 0.06 : 0.045) : raises === 2 ? 0.022 : 0.012;
+      // re-raise wider against players who raise a lot (their range is weak)
+      const loose = TUNE.adapt ? clamp(readsOf(c, raiser.id).widenRaise, 1, 3) : 1;
+      const valueTop = (raises === 1 ? (inPosition ? 0.06 : 0.045) : raises === 2 ? 0.022 : 0.012) * loose;
       const bluff = raises === 1 && suited && pct > 0.1 && pct < 0.24 && inPosition && nextFloat(rng) < 0.22;
       if (pct <= valueTop || bluff) {
         const to = raises === 1 ? view.currentBet * (inPosition ? 3 : 3.6) : view.currentBet * 2.3;
@@ -375,7 +379,12 @@ function preflop(c: Ctx): BotDecision {
     if (l.canRaise && pct <= (limpers ? 0.12 : 0.2)) return decision(raiseAction(view, bb * (3 + limpers)), 0);
     return decision({ type: 'check' }, 0);
   }
-  let top = openPct(behind) * (limpers ? 0.7 : 1) * (me.isSmallBlind && behind === 1 ? 1.15 : 1);
+  // steal more when the players behind rarely defend, less against loose callers
+  const vpipBehind = behindPlayers.length
+    ? behindPlayers.reduce((a, o) => a + tendencies(c.stats?.[o.id]).vpip, 0) / behindPlayers.length
+    : DEFAULT_TENDENCIES.vpip;
+  const steal = TUNE.adapt ? clamp(DEFAULT_TENDENCIES.vpip / vpipBehind, 0.75, 1.8) : 1;
+  let top = Math.min(0.85, openPct(behind) * steal) * (limpers ? 0.7 : 1) * (me.isSmallBlind && behind === 1 ? 1.15 : 1);
   if (me.isSmallBlind && behind === 1) top = Math.max(top, 0.45);
   const edge = 0.03;
   const pOpen = pct <= top - edge ? 1 : pct >= top + edge ? 0 : (top + edge - pct) / (2 * edge);
