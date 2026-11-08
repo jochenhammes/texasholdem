@@ -35,7 +35,7 @@ export const de = {
   theme_table: 'Pokertisch',
   theme_clean: 'Clean',
   themeHint_table: 'Dunkel, mit Tisch',
-  themeHint_clean: 'Hell und schlicht',
+  themeHint_clean: 'Schlicht, hell oder dunkel wie dein Gerät',
   fourColor: 'Vierfarben-Deck',
   fourColorHint: 'Karo blau, Kreuz grün',
   sound: 'Sound',

@@ -37,7 +37,7 @@ export const en: Record<keyof typeof de, string> = {
   theme_table: 'Poker table',
   theme_clean: 'Clean',
   themeHint_table: 'Dark, with a table',
-  themeHint_clean: 'Light and minimal',
+  themeHint_clean: 'Minimal, light or dark like your device',
   fourColor: 'Four-color deck',
   fourColorHint: 'Diamonds blue, clubs green',
   sound: 'Sound',

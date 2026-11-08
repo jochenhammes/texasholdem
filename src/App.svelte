@@ -17,12 +17,23 @@
     document.documentElement.lang = i18n.locale;
   });
 
+  // "Clean" follows the system colour scheme (light/dark), live
+  const darkQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+  let systemDark = $state(darkQuery?.matches ?? false);
+  $effect(() => {
+    if (!darkQuery) return;
+    const onChange = (e: MediaQueryListEvent) => (systemDark = e.matches);
+    darkQuery.addEventListener('change', onChange);
+    return () => darkQuery.removeEventListener('change', onChange);
+  });
+
   // Design: data-theme on <html> switches the CSS tokens (see app.css)
   $effect(() => {
     const root = document.documentElement;
     if (settings.theme === 'clean') root.dataset.theme = 'clean';
     else delete root.dataset.theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', settings.theme === 'clean' ? '#f4f5f7' : '#07090d');
+    const color = settings.theme === 'clean' ? (systemDark ? '#111318' : '#f4f5f7') : '#07090d';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
   });
 
   function start(setup: GameSetup) {

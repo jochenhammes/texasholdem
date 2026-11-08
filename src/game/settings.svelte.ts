@@ -1,5 +1,5 @@
 export type AnimSpeed = 'relaxed' | 'normal' | 'fast';
-/** `table`: dark poker table (default). `clean`: light, sober layout without a table. */
+/** `table`: dark poker table (default). `clean`: sober layout without a table, follows the system light/dark mode. */
 export type Theme = 'table' | 'clean';
 
 export interface Settings {
