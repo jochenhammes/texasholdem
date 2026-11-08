@@ -3,7 +3,8 @@
   import type { TableView } from '../../engine/view';
   import { projectedLegal, type PreAction, type QueuedPreAction } from '../../game/preAction';
   import { chips, t } from '../../i18n/index.svelte';
-  import { slide } from 'svelte/transition';
+  import { fly } from 'svelte/transition';
+  import PlayingCard from './PlayingCard.svelte';
 
   let {
     view,
@@ -139,142 +140,153 @@
   const sliderPct = $derived(
     L && L.maxRaiseTo > L.minRaiseTo ? ((amount - L.minRaiseTo) / (L.maxRaiseTo - L.minRaiseTo)) * 100 : 100,
   );
+  // shown inside the raise panel, which floats over the bottom of the table
+  const myCards = $derived(view.players.find((p) => p.id === heroId)?.holeCards ?? []);
   const queuedRaise = $derived(queued?.action.type === 'raise' ? queued.action.to : null);
 </script>
 
+<!--
+  Fixed layout: a status line and one button row of constant height, whatever
+  the phase – the table above never moves. The raise panel floats above the dock.
+-->
 <div class="dock" class:pre-mode={mode === 'pre'}>
   {#if L && raising}
-    <div class="raise-panel" transition:slide={{ duration: 180 }}>
-      <div class="row presets">
-        {#each presets as p (p.label)}
-          <button class="chip-btn" class:on={amount === p.value} onclick={() => (amount = p.value)}>{p.label}</button>
-        {/each}
+      <div class="raise-panel" transition:fly={{ y: 12, duration: 160 }}>
+        <div class="row presets">
+          {#each presets as p (p.label)}
+            <button class="chip-btn" class:on={amount === p.value} onclick={() => (amount = p.value)}>{p.label}</button>
+          {/each}
+        </div>
+        <div class="row slider-row">
+          {#if myCards.length}
+            <div class="my-cards" aria-hidden="true">
+              {#each myCards as card, i (i)}<PlayingCard {card} size="sm" />{/each}
+            </div>
+          {/if}
+          <button class="step" aria-label="-" onclick={() => (amount = round(amount - Math.max(unit, view.level.bb)))}>−</button>
+          <input
+            type="range"
+            min={L.minRaiseTo}
+            max={L.maxRaiseTo}
+            step={unit}
+            bind:value={amount}
+            style="--p:{sliderPct}%"
+            aria-label={t('raiseTo')}
+          />
+          <button class="step" aria-label="+" onclick={() => (amount = round(amount + Math.max(unit, view.level.bb)))}>+</button>
+          <input
+            bind:this={amountInput}
+            class="amount-input num"
+            type="text"
+            inputmode="numeric"
+            enterkeyhint="done"
+            autocomplete="off"
+            aria-label={t('amount')}
+            title={`${chips(L.minRaiseTo)} – ${chips(L.maxRaiseTo)}`}
+            value={typed ?? String(round(amount))}
+            oninput={onType}
+            onblur={commitTyped}
+            onkeydown={onKey}
+            onfocus={(e) => e.currentTarget.select()}
+          />
+        </div>
       </div>
-      <div class="row slider-row">
-        <button class="step" aria-label="-" onclick={() => (amount = round(amount - Math.max(unit, view.level.bb)))}>−</button>
-        <input
-          type="range"
-          min={L.minRaiseTo}
-          max={L.maxRaiseTo}
-          step={unit}
-          bind:value={amount}
-          style="--p:{sliderPct}%"
-          aria-label={t('raiseTo')}
-        />
-        <button class="step" aria-label="+" onclick={() => (amount = round(amount + Math.max(unit, view.level.bb)))}>+</button>
-        <input
-          bind:this={amountInput}
-          class="amount-input num"
-          type="text"
-          inputmode="numeric"
-          enterkeyhint="done"
-          autocomplete="off"
-          aria-label={t('amount')}
-          title={`${chips(L.minRaiseTo)} – ${chips(L.maxRaiseTo)}`}
-          value={typed ?? String(round(amount))}
-          oninput={onType}
-          onblur={commitTyped}
-          onkeydown={onKey}
-          onfocus={(e) => e.currentTarget.select()}
-        />
-      </div>
-    </div>
-    <div class="buttons">
-      <button class="btn ghost" onclick={() => (raising = false)}>{t('cancel')}</button>
-      <button class="btn raise wide" onclick={confirmRaise}>
-        <span>
-          {#if mode === 'pre'}{t('preSelect')} ·{/if}
-          {isAllIn ? t('allin') : L.isBet ? t('bet') : t('raiseTo')}
-        </span>
-        <span class="num amt">{chips(round(amount))}</span>
-      </button>
-    </div>
-  {:else if mode === 'act' && legal}
-    {#if notice}<div class="pre-head"><span class="notice">{notice}</span></div>{/if}
-    <div class="buttons">
-      <button class="btn fold" onclick={() => send({ type: 'fold' })}>{t('fold')}</button>
-      {#if legal.canCheck}
-        <button class="btn primary" onclick={() => send({ type: 'check' })}>{t('check')}</button>
-      {:else}
-        <button class="btn primary" onclick={() => send({ type: 'call' })}>
-          {legal.callAmount >= legal.maxRaiseTo - legal.playerBet ? t('allin') : t('call')}
-          <span class="num amt">{chips(legal.callAmount)}</span>
-        </button>
-      {/if}
-      {#if legal.canRaise}
-        <button class="btn raise" onclick={openRaise}>{legal.isBet ? t('bet') : t('raise')}</button>
-      {:else}
-        <button class="btn raise" disabled>{t('raise')}</button>
-      {/if}
-    </div>
-  {:else if mode === 'pre' && pre}
-    <div class="pre-head">
-      {#if notice}
-        <span class="notice">{notice}</span>
-      {:else if thinkingName}
-        <span class="pulse"></span><span>{t('waiting', { name: thinkingName })}</span>
-      {:else}
-        <span>{t('preHint')}</span>
-      {/if}
-    </div>
-    <div class="buttons pre">
-      {#if pre.canCheck}
-        <button class="pre-btn fold" class:on={sel('checkFold')} aria-pressed={sel('checkFold')} onclick={() => togglePre({ type: 'checkFold' })}>
-          {t('checkFold')}
-        </button>
-        <button
-          class="pre-btn call"
-          class:on={sel('check')}
-          aria-pressed={sel('check')}
-          onclick={() => togglePre({ type: 'check', level: pre.currentBet })}
-        >
-          {t('check')}
-        </button>
-      {:else}
-        <button class="pre-btn fold" class:on={sel('fold')} aria-pressed={sel('fold')} onclick={() => togglePre({ type: 'fold' })}>
-          {t('fold')}
-        </button>
-        <button
-          class="pre-btn call"
-          class:on={sel('call')}
-          aria-pressed={sel('call')}
-          onclick={() => togglePre({ type: 'call', level: pre.currentBet, amount: pre.callAmount })}
-        >
-          {pre.callAmount >= pre.maxRaiseTo - pre.playerBet ? t('allin') : t('call')}
-          <span class="num amt">{chips(pre.callAmount)}</span>
-        </button>
-      {/if}
-      <button
-        class="pre-btn raise"
-        class:on={queuedRaise !== null}
-        aria-pressed={queuedRaise !== null}
-        disabled={!pre.canRaise}
-        onclick={() => (queuedRaise !== null ? onPreAction(null) : openRaise())}
-      >
-        {pre.isBet ? t('bet') : t('raise')}
-        {#if queuedRaise !== null}<span class="num amt">{chips(queuedRaise)}</span>{/if}
-      </button>
-    </div>
-  {:else if awaitingContinue}
-    <div class="buttons continue">
-      <button class="btn primary" onclick={() => onContinue?.()}>{t('nextHand')}</button>
-    </div>
-  {:else}
-    <div class="waiting">
-      {#if thinkingName}
-        <span class="pulse"></span>{t('waiting', { name: thinkingName })}
-      {:else}
-        &nbsp;
-      {/if}
-    </div>
   {/if}
+
+  <div class="status-line">
+    {#if notice}
+      <span class="notice">{notice}</span>
+    {:else if mode === 'pre' && !raising}
+      {#if thinkingName}<span class="pulse"></span><span>{t('waiting', { name: thinkingName })}</span>{:else}<span>{t('preHint')}</span>{/if}
+    {/if}
+  </div>
+
+  <div class="row-main">
+    {#if L && raising}
+      <div class="buttons">
+        <button class="btn ghost" onclick={() => (raising = false)}>{t('cancel')}</button>
+        <button class="btn raise wide" onclick={confirmRaise}>
+          <span>
+            {#if mode === 'pre'}{t('preSelect')} ·{/if}
+            {isAllIn ? t('allin') : L.isBet ? t('bet') : t('raiseTo')}
+          </span>
+          <span class="num amt">{chips(round(amount))}</span>
+        </button>
+      </div>
+    {:else if mode === 'act' && legal}
+      <div class="buttons">
+        <button class="btn fold" onclick={() => send({ type: 'fold' })}>{t('fold')}</button>
+        {#if legal.canCheck}
+          <button class="btn primary" onclick={() => send({ type: 'check' })}>{t('check')}</button>
+        {:else}
+          <button class="btn primary" onclick={() => send({ type: 'call' })}>
+            {legal.callAmount >= legal.maxRaiseTo - legal.playerBet ? t('allin') : t('call')}
+            <span class="num amt">{chips(legal.callAmount)}</span>
+          </button>
+        {/if}
+        {#if legal.canRaise}
+          <button class="btn raise" onclick={openRaise}>{legal.isBet ? t('bet') : t('raise')}</button>
+        {:else}
+          <button class="btn raise" disabled>{t('raise')}</button>
+        {/if}
+      </div>
+    {:else if mode === 'pre' && pre}
+      <div class="buttons pre">
+        {#if pre.canCheck}
+          <button class="pre-btn fold" class:on={sel('checkFold')} aria-pressed={sel('checkFold')} onclick={() => togglePre({ type: 'checkFold' })}>
+            {t('checkFold')}
+          </button>
+          <button
+            class="pre-btn call"
+            class:on={sel('check')}
+            aria-pressed={sel('check')}
+            onclick={() => togglePre({ type: 'check', level: pre.currentBet })}
+          >
+            {t('check')}
+          </button>
+        {:else}
+          <button class="pre-btn fold" class:on={sel('fold')} aria-pressed={sel('fold')} onclick={() => togglePre({ type: 'fold' })}>
+            {t('fold')}
+          </button>
+          <button
+            class="pre-btn call"
+            class:on={sel('call')}
+            aria-pressed={sel('call')}
+            onclick={() => togglePre({ type: 'call', level: pre.currentBet, amount: pre.callAmount })}
+          >
+            {pre.callAmount >= pre.maxRaiseTo - pre.playerBet ? t('allin') : t('call')}
+            <span class="num amt">{chips(pre.callAmount)}</span>
+          </button>
+        {/if}
+        <button
+          class="pre-btn raise"
+          class:on={queuedRaise !== null}
+          aria-pressed={queuedRaise !== null}
+          disabled={!pre.canRaise}
+          onclick={() => (queuedRaise !== null ? onPreAction(null) : openRaise())}
+        >
+          {pre.isBet ? t('bet') : t('raise')}
+          {#if queuedRaise !== null}<span class="num amt">{chips(queuedRaise)}</span>{/if}
+        </button>
+      </div>
+    {:else if awaitingContinue}
+      <div class="buttons continue">
+        <button class="btn primary" onclick={() => onContinue?.()}>{t('nextHand')}</button>
+      </div>
+    {:else}
+      <div class="waiting">
+        {#if thinkingName}<span class="pulse"></span>{t('waiting', { name: thinkingName })}{/if}
+      </div>
+    {/if}
+  </div>
 </div>
 
 <style>
   .dock {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
     padding: 10px 12px calc(10px + var(--safe-b));
     padding-left: calc(12px + var(--safe-l));
     padding-right: calc(12px + var(--safe-r));
@@ -307,10 +319,68 @@
     background: var(--panel-3);
   }
 
+  /* floats above the dock so the table does not move when it opens */
   .raise-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    z-index: 20;
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 10px;
+    padding: 12px calc(12px + var(--safe-r)) 10px calc(12px + var(--safe-l));
+    background: var(--panel-solid);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25);
+  }
+  .raise-panel > .row {
+    width: min(560px, 100%);
+  }
+  .my-cards {
+    flex: none;
+    display: flex;
+    gap: 3px;
+    margin-right: 4px;
+  }
+  /* wide screens (iPad, desktop): one compact row */
+  @media (min-width: 900px) {
+    .raise-panel {
+      flex-direction: row;
+      justify-content: center;
+      padding-top: 10px;
+    }
+    .raise-panel > .row {
+      width: auto;
+    }
+    .raise-panel > .presets {
+      flex: none;
+    }
+    .raise-panel > .slider-row {
+      flex: 1;
+      max-width: 560px;
+    }
+  }
+  /* constant heights, whatever is shown */
+  .status-line {
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-3);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .row-main {
+    height: 54px;
+    width: 100%;
+  }
+  .row-main > .buttons,
+  .row-main > .waiting {
+    height: 100%;
   }
   .row {
     display: flex;
@@ -381,23 +451,13 @@
     background: #fff;
   }
 
-  .pre-head {
-    min-height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 0.8rem;
-    color: var(--text-3);
-    margin-bottom: -2px;
-  }
   .notice {
     color: var(--gold);
     font-weight: 600;
   }
   .pre-btn {
     position: relative;
-    min-height: 46px;
+    min-height: 54px;
     padding: 0 4px;
     border-radius: 14px;
     display: flex;
@@ -470,7 +530,6 @@
   }
 
   .waiting {
-    min-height: 54px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -496,8 +555,8 @@
     .dock {
       align-items: center;
     }
-    .buttons,
-    .raise-panel {
+    .row-main,
+    .status-line {
       width: min(560px, 100%);
     }
   }

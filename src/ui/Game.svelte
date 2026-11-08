@@ -467,5 +467,21 @@
     .game > :global(.dock .buttons.pre) {
       grid-template-columns: 1fr 1fr;
     }
+    /* side dock: heights are fixed by the column, so content may flow */
+    .game > :global(.dock .row-main) {
+      height: auto;
+    }
+    /* the side column never grows the page, it scrolls internally if needed */
+    .game > :global(.dock) {
+      min-height: 0;
+      overflow-y: auto;
+    }
+    .game > :global(.dock .raise-panel) {
+      position: static;
+      padding: 0;
+      background: none;
+      border: 0;
+      box-shadow: none;
+    }
   }
 </style>
