@@ -3,12 +3,16 @@ import { nextFloat, seedRng, type RngState } from '../engine/rng';
 import type { TableView } from '../engine/view';
 import { monteCarloEquity } from './equity';
 import type { BotProfile } from './profiles';
+import { decideExpert } from './expert';
+import type { StatsTable } from './opponentStats';
 
 /** Compact record of what happened in the current hand (fed by the controller). */
 export interface HandAction {
   playerId: PlayerId;
   street: Street;
   type: 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allin';
+  /** Raise-to amount for bets/raises/all-ins, amount added for calls. */
+  amount?: number;
 }
 
 export interface BotInput {
@@ -16,6 +20,8 @@ export interface BotInput {
   profile: BotProfile;
   history: HandAction[];
   seed: number;
+  /** What has been observed about each player this tournament (expert bots). */
+  stats?: StatsTable;
 }
 
 export interface BotDecision {
@@ -46,6 +52,7 @@ function opponentRange(id: PlayerId, history: HandAction[], awareness: number): 
 }
 
 export function decide(input: BotInput): BotDecision {
+  if (input.profile.difficulty === 'hard') return decideExpert(input);
   const { view, profile, history } = input;
   const rng = seedRng(input.seed);
   const legal = view.legal;

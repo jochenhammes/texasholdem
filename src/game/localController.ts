@@ -7,6 +7,7 @@ import { makeTournamentConfig } from '../engine/tournament';
 import type { GameEvent, PlayerAction, SeatPlayer, TableState } from '../engine/types';
 import { toView } from '../engine/view';
 import { storage, type SavedGame } from './storage';
+import { trackStats, type StatsTable } from '../ai/opponentStats';
 import type { GameController, GameSetup, GameSnapshot, LoggedEvent } from './types';
 
 export const HERO_ID = 'hero';
@@ -30,6 +31,8 @@ interface Internal {
   history: HandAction[];
   log: LoggedEvent[];
   statsRecorded?: boolean;
+  /** What each player has shown this tournament (read by expert bots). */
+  oppStats?: StatsTable;
 }
 
 export function newGame(setup: GameSetup): Internal {
@@ -62,6 +65,7 @@ export class LocalGameController implements GameController {
   private awaitingContinue = false;
   private spectating = false;
   private logId = 0;
+  private perHand = { vpip: new Set<string>(), pfr: new Set<string>() };
   private rng = seedRng(randomSeed());
   private timers = new Set<ReturnType<typeof setTimeout>>();
 
@@ -76,6 +80,7 @@ export class LocalGameController implements GameController {
       history: game.history ?? [],
       log: game.log ?? [],
       statsRecorded: game.statsRecorded,
+      oppStats: game.oppStats ?? {},
     };
     this.logId = this.g.log.reduce((m, e) => Math.max(m, e.id), 0);
     for (const [id, pers] of Object.entries(this.g.personalities)) {
@@ -229,6 +234,7 @@ export class LocalGameController implements GameController {
         profile,
         history: this.g.history,
         seed: nextInt(this.rng, 2 ** 31),
+        stats: this.g.oppStats,
       }),
       this.sleep(minThink),
     ]);
@@ -250,12 +256,13 @@ export class LocalGameController implements GameController {
         this.g.history = [];
         if (!this.hero.eliminated) this.bumpStats((st) => st.handsPlayed++);
       }
-      if (e.type === 'action') this.g.history.push({ playerId: e.playerId, street: s.street, type: e.action.type });
+      if (e.type === 'action') this.g.history.push({ playerId: e.playerId, street: s.street, type: e.action.type, amount: e.action.amount });
       if (e.type !== 'dealHole') this.g.log.push({ id: ++this.logId, hand: s.handNumber, event: e });
       if (e.type === 'eliminated' && e.playerId === HERO_ID) this.recordResult(e.place);
       if (e.type === 'tournamentComplete' && e.winnerId === HERO_ID) this.recordResult(1);
     }
     if (this.g.log.length > 400) this.g.log.splice(0, this.g.log.length - 400);
+    trackStats((this.g.oppStats ??= {}), events, s.street, () => s.players.filter((p) => !p.eliminated).map((p) => p.id), this.perHand);
     this.lastEvents = events;
     this.persist();
     this.emit();
@@ -291,6 +298,7 @@ export class LocalGameController implements GameController {
       history: this.g.history,
       log: this.g.log.slice(-150),
       statsRecorded: this.g.statsRecorded,
+      oppStats: this.g.oppStats,
     });
   }
 

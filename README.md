@@ -14,6 +14,10 @@ lässt es sich direkt auf GitHub Pages hosten.
 - **KI-Gegner** in drei Stufen (Leicht/Mittel/Schwer) mit Persönlichkeiten (Fels, TAG, LAG,
   Calling Station, Maniac). Entscheidungen basieren auf Monte-Carlo-Equity (in einem Web Worker,
   damit die UI flüssig bleibt), Pot Odds, Position, Range-Modellierung und Push/Fold bei kurzem Stack
+- **Schwer** (`src/ai/expert.ts`): gewichtete Ranges über alle 1.326 Startkarten-Kombinationen, die nach
+  jeder Gegneraktion nachjustiert werden; Startkarten-Tabellen nach Position; Hand- und Board-Erkennung
+  (Made Hands, Draws); Entscheidungen per Erwartungswert inkl. Fold Equity für mehrere Einsatzgrößen;
+  Push/Fold per Erwartungswert. Benchmark: `bun scripts/bench-ai.ts hard-vs-medium 120 1`
 - **Mobile first**: Hoch- und Querformat, Safe Areas, große Touch-Ziele, als Web-App auf dem
   Home-Bildschirm installierbar, offline spielbar
 - **Zwei Designs** (Lobby → Design): dunkler Pokertisch (Standard) oder „Clean“ – hell, schlicht,
