@@ -20,7 +20,7 @@ lässt es sich direkt auf GitHub Pages hosten.
   Push/Fold per Erwartungswert. Benchmark: `bun scripts/bench-ai.ts hard-vs-medium 120 1`
 - **Mobile first**: Hoch- und Querformat, Safe Areas, große Touch-Ziele, als Web-App auf dem
   Home-Bildschirm installierbar, offline spielbar
-- **Zwei Designs** (Lobby → Design): dunkler Pokertisch (Standard) oder „Clean“ – hell, schlicht,
+- **Zwei Designs** (Lobby → Design): dunkler Pokertisch (Standard) oder „Clean“ – schlicht, hell oder dunkel je nach Systemeinstellung,
   ohne Tisch, mit Gegner-Kacheln. Umschaltbar jederzeit, auch im Spiel über die Einstellungen
 - **Deutsch/Englisch**, Vierfarben-Deck, synthetische Soundeffekte (keine Audiodateien),
   Handstärke-Anzeige, Spielverlauf, Spieltempo

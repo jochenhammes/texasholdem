@@ -127,4 +127,19 @@
     height: 14px;
     box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.18);
   }
+  /* the preview follows the system too */
+  @media (prefers-color-scheme: dark) {
+    .preview.clean {
+      background: #111318;
+    }
+    .tiles i,
+    .panel {
+      background: #1a1d24;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+    .preview.clean .c {
+      background: #f5f6f8;
+      box-shadow: none;
+    }
+  }
 </style>

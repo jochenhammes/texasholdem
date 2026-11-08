@@ -56,7 +56,7 @@
   -webkit-text-size-adjust: 100%;
 }
 
-/* ───── "Clean" theme: light, sober, no poker table ───── */
+/* ───── "Clean" theme: sober, no poker table – light (dark variant below) ───── */
 :root[data-theme='clean'] {
   color-scheme: light;
   --bg: #f4f5f7;
@@ -86,6 +86,38 @@
 
   --black: #111827;
   --shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+/* "Clean" follows the system: the same sober layout in dark when the device is dark */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='clean'] {
+    color-scheme: dark;
+    --bg: #111318;
+    --bg-elev: #1a1d24;
+    --panel: rgba(26, 29, 36, 0.88);
+    --panel-solid: #1a1d24;
+    --panel-2: rgba(255, 255, 255, 0.05);
+    --panel-3: rgba(255, 255, 255, 0.09);
+    --line: rgba(255, 255, 255, 0.08);
+    --line-2: rgba(255, 255, 255, 0.15);
+    --text: #e8eaee;
+    --text-2: #a4abb8;
+    --text-3: #6f7785;
+
+    --accent: #34c38f;
+    --accent-ink: #06150f;
+    --raise: #8189f5;
+    --raise-ink: #0b0d26;
+    --gold: #e0b252;
+    --danger: #f0716b;
+
+    --card-face: #f5f6f8;
+    --card-back: linear-gradient(150deg, #4b5565, #353c48);
+    --card-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+
+    --black: #15171b;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
 }
 
 *,
