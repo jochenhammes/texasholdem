@@ -45,6 +45,10 @@ const TUNE = {
   strictShove: 1,
   /** Heads-up: the button raises more instead of limping (1 = on). */
   huOpen: 1,
+  /** Pure push/fold only from this effective stack (big blinds) down – above it, normal raises. */
+  pushBB: 8,
+  /** Re-shove over a raise only from this effective stack down (unless the raise commits us anyway). */
+  reshoveBB: 12,
   /** Lower bound for how much an aggressive player's bets still say about their hand (× default). */
   minSoft: 0.75,
   /** Raise size facing a bet, as a multiple of that bet (fixed sizing mode). */
@@ -329,7 +333,7 @@ function preflop(c: Ctx): BotDecision {
   const inPosition = behind === 0 || (behind === 1 && behindPlayers[0]?.isBigBlind && !me.isSmallBlind);
 
   // ── short stack, unopened: shove or fold by EV ──
-  if (raises === 0 && effBB <= 13 && l.canRaise) {
+  if (raises === 0 && effBB <= TUNE.pushBB && l.canRaise) {
     const shoveBB = Math.min(myStackBB, effBB);
     const cp = callShovePct(shoveBB);
     const pAllFold = behindPlayers.reduce((a) => a * (1 - cp), 1);
@@ -359,7 +363,7 @@ function preflop(c: Ctx): BotDecision {
     const evCall = R * eq * (P + C) - C;
     const cands: Candidate[] = [{ action: fold, ev: 0 }, { action: { type: 'call' }, ev: evCall }];
 
-    const shortOrAllIn = raiser.allIn || effBB <= 18 || C >= 0.35 * me.stack;
+    const shortOrAllIn = raiser.allIn || effBB <= TUNE.reshoveBB || C >= 0.35 * me.stack;
     if (l.canRaise && shortOrAllIn) {
       // re-shove: some of the raiser's range folds unless he is all-in
       const jamBB = myStackBB;
