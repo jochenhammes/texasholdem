@@ -217,7 +217,7 @@
         <span>{t('preHint')}</span>
       {/if}
     </div>
-    <div class="buttons pre" class:four={!pre.canCheck}>
+    <div class="buttons pre">
       {#if pre.canCheck}
         <button class="pre-btn fold" class:on={sel('checkFold')} aria-pressed={sel('checkFold')} onclick={() => togglePre({ type: 'checkFold' })}>
           {t('checkFold')}
@@ -242,9 +242,6 @@
         >
           {pre.callAmount >= pre.maxRaiseTo - pre.playerBet ? t('allin') : t('call')}
           <span class="num amt">{chips(pre.callAmount)}</span>
-        </button>
-        <button class="pre-btn call" class:on={sel('callAny')} aria-pressed={sel('callAny')} onclick={() => togglePre({ type: 'callAny' })}>
-          {t('callAny')}
         </button>
       {/if}
       <button
@@ -397,9 +394,6 @@
   .notice {
     color: var(--gold);
     font-weight: 600;
-  }
-  .buttons.pre.four {
-    grid-template-columns: repeat(4, 1fr);
   }
   .pre-btn {
     position: relative;
