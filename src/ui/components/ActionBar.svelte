@@ -2,6 +2,7 @@
   import type { PlayerAction, PlayerId } from '../../engine/types';
   import type { TableView } from '../../engine/view';
   import { projectedLegal, type PreAction, type QueuedPreAction } from '../../game/preAction';
+  import { snapRaiseTo } from '../../game/betSizing';
   import { chips, t } from '../../i18n/index.svelte';
   import { fly } from 'svelte/transition';
   import PlayingCard from './PlayingCard.svelte';
@@ -38,11 +39,7 @@
   let amount = $state(0);
 
   const unit = $derived(Math.max(1, Math.min(view.level.sb, 25)));
-  const round = (v: number) => {
-    if (!L) return v;
-    const r = Math.round(v / unit) * unit;
-    return Math.max(L.minRaiseTo, Math.min(L.maxRaiseTo, r));
-  };
+  const round = (v: number) => (L ? snapRaiseTo(v, unit, L.minRaiseTo, L.maxRaiseTo) : v);
 
   /** Raise-to amount for a fraction of the pot (pot-size raise = call + pot after call). */
   function potFraction(f: number) {
@@ -136,7 +133,7 @@
     }
   });
 
-  const isAllIn = $derived(!!L && amount >= L.maxRaiseTo);
+  const isAllIn = $derived(!!L && round(amount) >= L.maxRaiseTo);
   const sliderPct = $derived(
     L && L.maxRaiseTo > L.minRaiseTo ? ((amount - L.minRaiseTo) / (L.maxRaiseTo - L.minRaiseTo)) * 100 : 100,
   );
@@ -168,7 +165,7 @@
             type="range"
             min={L.minRaiseTo}
             max={L.maxRaiseTo}
-            step={unit}
+            step="1"
             bind:value={amount}
             style="--p:{sliderPct}%"
             aria-label={t('raiseTo')}
