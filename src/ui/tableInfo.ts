@@ -30,7 +30,9 @@ export function tableInfo(view: TableView, handHints: boolean): TableInfo {
     const amount = chips(main.amount);
     winnerLine =
       main.winners.length > 1
-        ? `${t('splitPot')} · ${who}`
+        ? main.handKey
+          ? t('splitPotWith', { name: who, hand: handName(main.handKey) })
+          : `${t('splitPot')} · ${who}`
         : main.handKey
           ? t('winsWith', { name: who, amount, hand: handName(main.handKey) })
           : t('wins', { name: who, amount });
