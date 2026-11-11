@@ -158,7 +158,18 @@
   const thinkingName = $derived(snap?.thinkingId ? (view?.players.find((p) => p.id === snap!.thinkingId)?.name ?? null) : null);
   const total = $derived(view?.players.length ?? 0);
   const heroPlace = $derived(view?.placements.find((p) => p.playerId === HERO_ID)?.place ?? null);
-  const showResult = $derived(!!snap && ((snap.heroEliminated && !snap.spectating) || view?.phase === 'tournamentComplete'));
+  const resultDue = $derived(!!snap && ((snap.heroEliminated && !snap.spectating) || view?.phase === 'tournamentComplete'));
+  // Give the final hand 3 s on screen before the result sheet covers it.
+  const RESULT_DELAY_MS = 3000;
+  let showResult = $state(false);
+  $effect(() => {
+    if (!resultDue) {
+      showResult = false;
+      return;
+    }
+    const timer = setTimeout(() => (showResult = true), RESULT_DELAY_MS);
+    return () => clearTimeout(timer);
+  });
   const standings = $derived(
     view
       ? [...view.placements]
