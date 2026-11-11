@@ -36,7 +36,14 @@
         const who = e.winners.map((w) => nameOf(w.playerId)).join(' & ');
         const amount = chips(e.amount);
         return {
-          text: e.handKey ? t('winsWith', { name: who, amount, hand: handName(e.handKey) }) : t('wins', { name: who, amount }),
+          text:
+            e.winners.length > 1
+              ? e.handKey
+                ? t('ev_splitWith', { name: who, amount, hand: handName(e.handKey) })
+                : t('ev_split', { name: who, amount })
+              : e.handKey
+                ? t('winsWith', { name: who, amount, hand: handName(e.handKey) })
+                : t('wins', { name: who, amount }),
           kind: 'win',
         };
       }
