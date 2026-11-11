@@ -1,18 +1,17 @@
 import { BotClient } from '../ai/botClient';
-import type { HandAction } from '../ai/decide';
-import { makeProfile, randomPersonality, type BotProfile, type Personality } from '../ai/profiles';
-import { advance, applyAction, createTournament, RuleError, type Entrant } from '../engine/engine';
-import { nextFloat, nextInt, randomSeed, seedRng, shuffle } from '../engine/rng';
+import { randomPersonality, type Personality } from '../ai/profiles';
+import { createTournament, type Entrant } from '../engine/engine';
+import { randomSeed, seedRng, shuffle } from '../engine/rng';
 import { makeTournamentConfig } from '../engine/tournament';
-import type { GameEvent, PlayerAction, SeatPlayer, TableState } from '../engine/types';
+import type { GameEvent, PlayerAction, SeatPlayer } from '../engine/types';
 import { toView } from '../engine/view';
 import { storage, type SavedGame } from './storage';
-import { trackStats, type StatsTable } from '../ai/opponentStats';
-import type { GameController, GameSetup, GameSnapshot, LoggedEvent } from './types';
+import { TableRunner, type GameData } from './tableRunner';
+import type { GameController, GameSetup, GameSnapshot } from './types';
 
 export const HERO_ID = 'hero';
 
-const BOT_NAMES = [
+export const BOT_NAMES = [
   'Ava', 'Ben', 'Chen', 'Dana', 'Emil', 'Fiona', 'Gus', 'Hana', 'Ivo', 'Jule', 'Kai', 'Lena',
   'Milo', 'Nora', 'Otto', 'Pia', 'Quinn', 'Rosa', 'Sam', 'Tara', 'Uli', 'Vera', 'Wes', 'Yara', 'Zoe',
 ];
@@ -24,15 +23,8 @@ export interface Pacing {
   holdAfterShowdown?: () => boolean;
 }
 
-interface Internal {
-  setup: GameSetup;
-  state: TableState;
-  personalities: Record<string, Personality>;
-  history: HandAction[];
-  log: LoggedEvent[];
+interface Internal extends GameData {
   statsRecorded?: boolean;
-  /** What each player has shown this tournament (read by expert bots). */
-  oppStats?: StatsTable;
 }
 
 export function newGame(setup: GameSetup): Internal {
@@ -50,29 +42,17 @@ export function newGame(setup: GameSetup): Internal {
   return { setup, state, personalities, history: [], log: [] };
 }
 
+/** Single player: engine + bots in the browser, saved to localStorage. */
 export class LocalGameController implements GameController {
   private g: Internal;
+  private runner: TableRunner;
   private bots = new BotClient();
-  private profiles = new Map<string, BotProfile>();
   private listeners = new Set<(s: GameSnapshot) => void>();
   private lastEvents: GameEvent[] = [];
-  private thinkingId: string | null = null;
-  private running = false;
-  private disposed = false;
-  private paused = false;
-  private resumeGate: (() => void) | null = null;
-  private continueGate: (() => void) | null = null;
-  private awaitingContinue = false;
   private spectating = false;
-  private logId = 0;
-  private perHand = { vpip: new Set<string>(), pfr: new Set<string>() };
-  private rng = seedRng(randomSeed());
-  private timers = new Set<ReturnType<typeof setTimeout>>();
+  private disposed = false;
 
-  constructor(
-    game: Internal | SavedGame,
-    private pacing: Pacing,
-  ) {
+  constructor(game: Internal | SavedGame, pacing: Pacing) {
     this.g = {
       setup: game.setup,
       state: game.state,
@@ -82,15 +62,19 @@ export class LocalGameController implements GameController {
       statsRecorded: game.statsRecorded,
       oppStats: game.oppStats ?? {},
     };
-    this.logId = this.g.log.reduce((m, e) => Math.max(m, e.id), 0);
-    for (const [id, pers] of Object.entries(this.g.personalities)) {
-      this.profiles.set(id, makeProfile(this.g.setup.difficulty, pers));
-    }
+    this.runner = new TableRunner(this.g, {
+      decideBot: (input) => this.bots.decide(input),
+      speed: pacing.speed,
+      fastFactor: () => (this.hero.eliminated ? 0.45 : this.hero.folded ? 0.6 : 1),
+      turnTimeMs: null,
+      holdAfterShowdown: pacing.holdAfterShowdown,
+      shouldHold: () => this.hero.eliminated && !this.spectating,
+      onEvents: (events) => this.onEvents(events),
+      onUpdate: () => this.emit(),
+    });
     this.persist();
-    queueMicrotask(() => this.run());
+    queueMicrotask(() => this.runner.start());
   }
-
-  // ───────────── public API ─────────────
 
   subscribe(run: (s: GameSnapshot) => void) {
     this.listeners.add(run);
@@ -99,170 +83,40 @@ export class LocalGameController implements GameController {
   }
 
   act(action: PlayerAction) {
-    if (this.disposed) return;
-    const s = this.g.state;
-    if (s.phase !== 'betting' || s.players[s.toAct]?.id !== HERO_ID) return;
-    try {
-      this.apply(applyAction(s, HERO_ID, action));
-    } catch (e) {
-      if (e instanceof RuleError) {
-        console.warn('Illegal action ignored:', e.message);
-        return;
-      }
-      throw e;
-    }
-    this.run();
+    if (!this.disposed && !this.runner.act(HERO_ID, action)) console.warn('Action ignored', action);
   }
 
   setPaused(paused: boolean) {
-    this.paused = paused;
-    if (!paused && this.resumeGate) {
-      this.resumeGate();
-      this.resumeGate = null;
-    }
-    this.emit();
+    this.runner.setPaused(paused);
+  }
+
+  continueAfterShowdown() {
+    this.runner.continueAfterShowdown();
   }
 
   spectate() {
     this.spectating = true;
     this.emit();
-    this.run();
-  }
-
-  continueAfterShowdown() {
-    this.continueGate?.();
-    this.continueGate = null;
+    this.runner.nudge();
   }
 
   dispose() {
     this.disposed = true;
-    this.continueGate?.();
-    for (const t of this.timers) clearTimeout(t);
-    this.timers.clear();
-    this.resumeGate?.();
+    this.runner.dispose();
     this.bots.dispose();
     this.listeners.clear();
   }
-
-  // ───────────── game loop ─────────────
 
   private get hero(): SeatPlayer {
     return this.g.state.players.find((p) => p.id === HERO_ID)!;
   }
 
-  private async run() {
-    if (this.running || this.disposed) return;
-    this.running = true;
-    try {
-      while (!this.disposed) {
-        await this.waitIfPaused();
-        const s = this.g.state;
-        if (s.phase === 'tournamentComplete') break;
-        if (this.hero.eliminated && !this.spectating) break;
-        if (s.phase === 'betting') {
-          const p = s.players[s.toAct];
-          if (p.kind === 'human') break; // wait for act()
-          await this.botTurn(p);
-        } else {
-          if (this.shouldHold(s)) {
-            await this.holdForContinue();
-            if (this.disposed) break;
-            this.apply(advance(this.g.state));
-            continue;
-          }
-          await this.sleep(this.delayFor(s));
-          // the mode may have been switched on while we were waiting
-          if (!this.disposed && this.shouldHold(this.g.state)) continue;
-          if (this.disposed) break;
-          await this.waitIfPaused();
-          if (this.g.state.phase === 'tournamentComplete') break;
-          this.apply(advance(this.g.state));
-        }
-      }
-    } finally {
-      this.running = false;
-    }
-  }
-
-  /** Showdown finished with cards face up and the player wants to look at them. */
-  private shouldHold(s: TableState): boolean {
-    return s.phase === 'handComplete' && !!s.lastResult?.showdown && !!this.pacing.holdAfterShowdown?.();
-  }
-
-  private holdForContinue() {
-    this.awaitingContinue = true;
-    this.emit();
-    return new Promise<void>((resolve) => {
-      this.continueGate = () => {
-        this.awaitingContinue = false;
-        resolve();
-      };
-    });
-  }
-
-  private fastFactor(): number {
-    const h = this.hero;
-    // once the hero is out of the hand, things may move a bit quicker
-    return h.eliminated ? 0.45 : h.folded ? 0.6 : 1;
-  }
-
-  private delayFor(s: TableState): number {
-    const sp = this.pacing.speed() * this.fastFactor();
-    switch (s.phase) {
-      case 'idle':
-        return 400 * sp;
-      case 'streetComplete':
-        return (s.revealed.length ? 1300 : 750) * sp;
-      case 'showdown':
-        return 1100 * sp;
-      case 'handComplete':
-        return (s.lastResult?.showdown ? 3000 : 1700) * sp;
-      default:
-        return 500 * sp;
-    }
-  }
-
-  private async botTurn(p: SeatPlayer) {
-    const s = this.g.state;
-    this.thinkingId = p.id;
-    this.emit();
-    const profile = this.profiles.get(p.id) ?? makeProfile(this.g.setup.difficulty, 'tag');
-    const minThink = (450 + nextFloat(this.rng) * 900) * this.pacing.speed() * this.fastFactor();
-    const [action] = await Promise.all([
-      this.bots.decide({
-        view: toView(s, p.id),
-        profile,
-        history: this.g.history,
-        seed: nextInt(this.rng, 2 ** 31),
-        stats: this.g.oppStats,
-      }),
-      this.sleep(minThink),
-    ]);
-    if (this.disposed) return;
-    await this.waitIfPaused();
-    this.thinkingId = null;
-    if (s !== this.g.state || s.phase !== 'betting' || s.players[s.toAct]?.id !== p.id) return;
-    try {
-      this.apply(applyAction(s, p.id, action));
-    } catch {
-      this.apply(applyAction(s, p.id, s.players[s.toAct].bet >= s.currentBet ? { type: 'check' } : { type: 'fold' }));
-    }
-  }
-
-  private apply(events: GameEvent[]) {
-    const s = this.g.state;
+  private onEvents(events: GameEvent[]) {
     for (const e of events) {
-      if (e.type === 'handStart') {
-        this.g.history = [];
-        if (!this.hero.eliminated) this.bumpStats((st) => st.handsPlayed++);
-      }
-      if (e.type === 'action') this.g.history.push({ playerId: e.playerId, street: s.street, type: e.action.type, amount: e.action.amount });
-      if (e.type !== 'dealHole') this.g.log.push({ id: ++this.logId, hand: s.handNumber, event: e });
+      if (e.type === 'handStart' && !this.hero.eliminated) this.bumpStats((st) => st.handsPlayed++);
       if (e.type === 'eliminated' && e.playerId === HERO_ID) this.recordResult(e.place);
       if (e.type === 'tournamentComplete' && e.winnerId === HERO_ID) this.recordResult(1);
     }
-    if (this.g.log.length > 400) this.g.log.splice(0, this.g.log.length - 400);
-    trackStats((this.g.oppStats ??= {}), events, s.street, () => s.players.filter((p) => !p.eliminated).map((p) => p.id), this.perHand);
     this.lastEvents = events;
     this.persist();
     this.emit();
@@ -307,12 +161,14 @@ export class LocalGameController implements GameController {
       view: toView(this.g.state, HERO_ID),
       events: this.lastEvents,
       log: this.g.log,
-      thinkingId: this.thinkingId,
+      thinkingId: this.runner.thinkingId,
       heroEliminated: this.hero.eliminated,
       spectating: this.spectating,
-      paused: this.paused,
+      paused: this.runner.paused,
       personalities: this.g.personalities,
-      awaitingContinue: this.awaitingContinue,
+      turn: null,
+      multiplayer: null,
+      awaitingContinue: this.runner.awaitingContinue,
     };
   }
 
@@ -320,20 +176,5 @@ export class LocalGameController implements GameController {
     if (this.disposed) return;
     const snap = this.snapshot();
     for (const l of this.listeners) l(snap);
-  }
-
-  private sleep(ms: number) {
-    return new Promise<void>((resolve) => {
-      const t = setTimeout(() => {
-        this.timers.delete(t);
-        resolve();
-      }, Math.max(0, ms));
-      this.timers.add(t);
-    });
-  }
-
-  private waitIfPaused() {
-    if (!this.paused || this.disposed) return Promise.resolve();
-    return new Promise<void>((resolve) => (this.resumeGate = resolve));
   }
 }

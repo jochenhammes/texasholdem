@@ -2,7 +2,6 @@
   import { onDestroy, untrack } from 'svelte';
   import { fly } from 'svelte/transition';
   import type { GameController, GameSnapshot } from '../game/types';
-  import { HERO_ID } from '../game/localController';
   import { settings } from '../game/settings.svelte';
   import { chips, t } from '../i18n/index.svelte';
   import { play, setSoundEnabled, unlockAudio } from './sound';
@@ -54,7 +53,7 @@
   function handlePreAction(s: GameSnapshot): boolean {
     if (!queued) return false;
     const v = s.view;
-    if (!isStillValid(queued, v, HERO_ID)) {
+    if (!isStillValid(queued, v, v.viewerId ?? '')) {
       // a changed bet on the same street is worth telling; a new street/hand is not
       cancelPre(queued.hand === v.handNumber && queued.street === v.street && v.phase === 'betting');
       return false;
@@ -70,7 +69,7 @@
     const seq = v.seq;
     clearTimeout(preTimer);
     preTimer = setTimeout(() => {
-      if (snap?.view.seq === seq && snap.view.toActId === HERO_ID) controller.act(action);
+      if (snap?.view.seq === seq && snap.view.toActId === snap.view.viewerId) controller.act(action);
     }, 260);
     return true;
   }
@@ -84,7 +83,7 @@
           react(s);
         }
         const fired = handlePreAction(s);
-        if (!fired && s.view.toActId === HERO_ID && lastToAct !== HERO_ID) play('turn');
+        if (!fired && s.view.toActId === s.view.viewerId && lastToAct !== s.view.viewerId) play('turn');
         lastToAct = s.view.toActId;
       }),
     ),
@@ -106,7 +105,7 @@
           play(e.action.type === 'fold' ? 'fold' : e.action.type === 'check' ? 'check' : e.action.type === 'allin' ? 'allin' : 'chip');
           break;
         case 'potAwarded':
-          play(e.winners.some((w) => w.playerId === HERO_ID) ? 'win' : 'chip');
+          play(e.winners.some((w) => w.playerId === s.view.viewerId) ? 'win' : 'chip');
           break;
         case 'levelUp':
           showToast(t('levelUp', { sb: chips(e.level.sb), bb: chips(e.level.bb) }));
@@ -155,9 +154,11 @@
   }
 
   const view = $derived(snap?.view);
+  const meId = $derived(snap?.view.viewerId ?? '');
+  const mp = $derived(snap?.multiplayer ?? null);
   const thinkingName = $derived(snap?.thinkingId ? (view?.players.find((p) => p.id === snap!.thinkingId)?.name ?? null) : null);
   const total = $derived(view?.players.length ?? 0);
-  const heroPlace = $derived(view?.placements.find((p) => p.playerId === HERO_ID)?.place ?? null);
+  const heroPlace = $derived(view?.placements.find((p) => p.playerId === meId)?.place ?? null);
   const resultDue = $derived(!!snap && ((snap.heroEliminated && !snap.spectating) || view?.phase === 'tournamentComplete'));
   // Give the final hand 3 s on screen before the result sheet covers it.
   const RESULT_DELAY_MS = 3000;
@@ -174,7 +175,7 @@
     view
       ? [...view.placements]
           .sort((a, b) => a.place - b.place)
-          .map((p) => ({ ...p, name: p.playerId === HERO_ID ? t('you') : (view.players.find((x) => x.id === p.playerId)?.name ?? '') }))
+          .map((p) => ({ ...p, name: p.playerId === meId ? t('you') : (view.players.find((x) => x.id === p.playerId)?.name ?? '') }))
       : [],
   );
   const winnerName = $derived(standings.find((s) => s.place === 1)?.name ?? '');
@@ -214,6 +215,14 @@
       {:else}
         <Table {snap} />
       {/if}
+      {#if snap.closed}
+        <div class="banner" transition:fly={{ y: -16, duration: 220 }}>
+          {t('tableClosed')}
+          <button class="btn primary" onclick={() => onExit('quit')}>{t('backToLobby')}</button>
+        </div>
+      {:else if snap.hostAway}
+        <div class="banner" transition:fly={{ y: -16, duration: 220 }}>{t('hostAway')}</div>
+      {/if}
       {#if toast}
         <div class="toast" transition:fly={{ y: -16, duration: 220 }}>{toast}</div>
       {/if}
@@ -221,7 +230,7 @@
 
     <ActionBar
       {view}
-      heroId={HERO_ID}
+      heroId={view.viewerId ?? ''}
       {thinkingName}
       {queued}
       notice={preNotice}
@@ -238,8 +247,14 @@
         <button class="btn primary block" onclick={closeSheet}>{t('continue')}</button>
         <button class="btn block" onclick={() => (sheet = 'settings')}>{t('settings')}</button>
         <button class="btn block" onclick={() => (sheet = 'log')}>{t('log')}</button>
-        <button class="btn ghost block" onclick={() => onExit('lobby')}>{t('saveAndExit')}</button>
-        <button class="btn danger block" onclick={() => confirm(t('quitConfirm')) && onExit('quit')}>{t('quit')}</button>
+        {#if mp?.isHost}
+          <button class="btn danger block" onclick={() => confirm(t('closeTableConfirm')) && onExit('quit')}>{t('closeTable')}</button>
+        {:else if mp}
+          <button class="btn danger block" onclick={() => confirm(t('leaveTableConfirm')) && onExit('quit')}>{t('leaveTable')}</button>
+        {:else}
+          <button class="btn ghost block" onclick={() => onExit('lobby')}>{t('saveAndExit')}</button>
+          <button class="btn danger block" onclick={() => confirm(t('quitConfirm')) && onExit('quit')}>{t('quit')}</button>
+        {/if}
       </div>
     </Sheet>
   {:else if sheet === 'settings'}
@@ -270,7 +285,7 @@
         {#if standings.length}
           <ol class="standings">
             {#each standings as s (s.playerId)}
-              <li class:me={s.playerId === HERO_ID}><span class="num">{s.place}.</span> {s.name}</li>
+              <li class:me={s.playerId === meId}><span class="num">{s.place}.</span> {s.name}</li>
             {/each}
           </ol>
         {/if}
@@ -279,7 +294,9 @@
           {#if view.phase !== 'tournamentComplete'}
             <button class="btn ghost block" onclick={() => controller.spectate()}>{t('watchOn')}</button>
           {/if}
-          <button class="btn primary block" onclick={() => onExit('new')}>{t('playAgain')}</button>
+          {#if !mp || mp.isHost}
+            <button class="btn primary block" onclick={() => onExit('new')}>{t('playAgain')}</button>
+          {/if}
           <button class="btn block" onclick={() => onExit('quit')}>{t('backToLobby')}</button>
         </div>
       </div>
@@ -332,6 +349,28 @@
     position: relative;
     flex: 1;
     min-height: 0;
+  }
+  .banner {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    translate: -50% 0;
+    z-index: 11;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px 8px 16px;
+    max-width: calc(100% - 24px);
+    border-radius: 16px;
+    background: var(--panel-solid);
+    color: var(--text);
+    font-weight: 600;
+    font-size: 0.88rem;
+    box-shadow: var(--shadow), 0 0 0 1px var(--line-2);
+  }
+  .banner .btn {
+    min-height: 36px;
+    font-size: 0.85rem;
   }
   .toast {
     position: absolute;

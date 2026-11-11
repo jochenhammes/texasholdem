@@ -2,7 +2,6 @@ import { rankOf } from '../engine/cards';
 import { describeHand } from '../engine/evaluator';
 import type { HandResult } from '../engine/types';
 import type { TableView } from '../engine/view';
-import { HERO_ID } from '../game/localController';
 import { chips, handName, t } from '../i18n/index.svelte';
 
 /** Display information shared by every table design (derived from the player view only). */
@@ -17,6 +16,7 @@ export interface TableInfo {
 }
 
 export function tableInfo(view: TableView, handHints: boolean): TableInfo {
+  const me = view.viewerId;
   const result = view.phase === 'handComplete' || view.phase === 'tournamentComplete' ? view.lastResult : null;
   const wonBy: Record<string, number> = {};
   for (const pot of result?.pots ?? []) for (const w of pot.winners) wonBy[w.playerId] = (wonBy[w.playerId] ?? 0) + w.amount;
@@ -25,7 +25,7 @@ export function tableInfo(view: TableView, handHints: boolean): TableInfo {
   const main = result?.pots[0];
   if (main) {
     const who = main.winners
-      .map((w) => (w.playerId === HERO_ID ? t('you') : (view.players.find((p) => p.id === w.playerId)?.name ?? '?')))
+      .map((w) => (w.playerId === me ? t('you') : (view.players.find((p) => p.id === w.playerId)?.name ?? '?')))
       .join(' & ');
     const amount = chips(main.amount);
     winnerLine =
@@ -40,7 +40,7 @@ export function tableInfo(view: TableView, handHints: boolean): TableInfo {
 
   // Hero's current hand, e.g. "Zwei Paare"
   let heroHint: string | null = null;
-  const hero = view.players.find((p) => p.id === HERO_ID);
+  const hero = view.players.find((p) => p.id === me);
   if (handHints && hero && !hero.folded && !hero.eliminated && !result) {
     const cards = hero.holeCards.filter((c): c is number => c !== null);
     if (cards.length === 2) {

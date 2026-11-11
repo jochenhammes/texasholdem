@@ -3,12 +3,11 @@
   import type { GameEvent } from '../../engine/types';
   import type { LoggedEvent } from '../../game/types';
   import type { TableView } from '../../engine/view';
-  import { HERO_ID } from '../../game/localController';
   import { chips, handName, t } from '../../i18n/index.svelte';
 
   let { log, view }: { log: LoggedEvent[]; view: TableView } = $props();
 
-  const nameOf = (id: string) => (id === HERO_ID ? t('you') : (view.players.find((p) => p.id === id)?.name ?? id));
+  const nameOf = (id: string) => (id === view.viewerId ? t('you') : (view.players.find((p) => p.id === id)?.name ?? id));
   const suitGlyph = ['♣', '♦', '♥', '♠'];
   const fmtCards = (cs: number[]) =>
     cs.map((c) => cardToString(c).replace('T', '10').slice(0, -1) + suitGlyph[c & 3] + '︎').join(' ');

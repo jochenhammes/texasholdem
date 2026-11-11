@@ -4,3 +4,6 @@ dist
 *.log
 .vite
 coverage
+firebase-debug.log
+database-debug.log
+.firebase

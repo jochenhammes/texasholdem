@@ -34,6 +34,14 @@ export interface GameSnapshot {
   spectating: boolean;
   paused: boolean;
   personalities: Record<PlayerId, Personality>;
+  /** Whose decision is pending and until when (multiplayer time limit). */
+  turn: { playerId: PlayerId; deadline: number | null } | null;
+  /** Multiplayer: the host is not connected, the table waits. */
+  hostAway?: boolean;
+  /** Multiplayer: the host closed the table. */
+  closed?: boolean;
+  /** Multiplayer info for menus (null in single player). */
+  multiplayer?: { room: string; isHost: boolean } | null;
   /** The table stopped after a showdown and waits for `continueAfterShowdown()`. */
   awaitingContinue: boolean;
 }
