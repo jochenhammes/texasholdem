@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { GameSnapshot } from '../../game/types';
-  import { HERO_ID } from '../../game/localController';
   import { settings } from '../../game/settings.svelte';
   import { chips, t } from '../../i18n/index.svelte';
   import { tableInfo } from '../tableInfo';
@@ -13,7 +12,8 @@
 
   const view = $derived(snap.view);
   const n = $derived(view.players.length);
-  const heroSeat = $derived(view.players.find((p) => p.id === HERO_ID)?.seat ?? 0);
+  const meId = $derived(view.viewerId ?? '');
+  const heroSeat = $derived(view.players.find((p) => p.id === meId)?.seat ?? 0);
 
   /** Squircle-ish placement: pushes diagonal seats towards the table's corners. */
   function place(idx: number, count: number, radius = 1) {
@@ -96,13 +96,14 @@
       player={s.p}
       x={s.pos.x}
       y={s.pos.y}
-      hero={s.p.id === HERO_ID}
+      hero={s.p.id === meId}
       thinking={snap.thinkingId === s.p.id}
       won={wonBy[s.p.id] ?? 0}
       handKey={showdownDone ? (result?.hands[s.p.id]?.key ?? null) : null}
       bestCards={showdownDone ? (result?.hands[s.p.id]?.best ?? []) : []}
       {showdownDone}
-      hint={s.p.id === HERO_ID ? heroHint : null}
+      hint={s.p.id === meId ? heroHint : null}
+      deadline={snap.turn?.playerId === s.p.id ? snap.turn.deadline : null}
     />
   {/each}
 </div>

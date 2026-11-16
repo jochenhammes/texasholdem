@@ -3,6 +3,7 @@
   import type { CategoryKey } from '../../engine/evaluator';
   import { chips, handName, t } from '../../i18n/index.svelte';
   import PlayingCard from './PlayingCard.svelte';
+  import TurnTimer from './TurnTimer.svelte';
   import { pop } from '../transitions';
 
   let {
@@ -16,6 +17,7 @@
     bestCards = [],
     showdownDone = false,
     hint = null,
+    deadline = null,
   }: {
     player: PlayerView;
     x: number;
@@ -27,6 +29,7 @@
     bestCards?: number[];
     showdownDone?: boolean;
     hint?: string | null;
+    deadline?: number | null;
   } = $props();
 
   function hue(s: string) {
@@ -95,6 +98,8 @@
     <div class="name">{hero ? t('you') : player.name}</div>
     <div class="stack num">{player.allIn && !player.eliminated ? t('allin') : chips(player.stack)}</div>
   </div>
+
+  {#if deadline}<div class="timer-slot"><TurnTimer {deadline} /></div>{/if}
 
   <div class="badge-slot">
     {#if won > 0}
@@ -302,6 +307,10 @@
       0 0 26px rgba(246, 196, 83, 0.4);
   }
 
+  .timer-slot {
+    width: 64px;
+    margin-top: 4px;
+  }
   .badge-slot {
     height: 22px;
     margin-top: 3px;

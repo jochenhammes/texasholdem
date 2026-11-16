@@ -1,12 +1,12 @@
 <script lang="ts">
   import type { PlayerView } from '../../engine/view';
   import type { GameSnapshot } from '../../game/types';
-  import { HERO_ID } from '../../game/localController';
   import { settings } from '../../game/settings.svelte';
   import { chips, handName, t } from '../../i18n/index.svelte';
   import { tableInfo } from '../tableInfo';
   import { pop } from '../transitions';
   import PlayingCard from './PlayingCard.svelte';
+  import TurnTimer from './TurnTimer.svelte';
 
   /**
    * "Clean" design: a calm, light layout without a poker table.
@@ -17,11 +17,12 @@
 
   const view = $derived(snap.view);
   const n = $derived(view.players.length);
-  const hero = $derived(view.players.find((p) => p.id === HERO_ID)!);
+  const meId = $derived(view.viewerId ?? '');
+  const hero = $derived(view.players.find((p) => p.id === meId)!);
   // opponents in acting order, starting left of the hero
   const opponents = $derived(
     view.players
-      .filter((p) => p.id !== HERO_ID)
+      .filter((p) => p.id !== meId)
       .sort((a, b) => ((a.seat - hero.seat + n) % n) - ((b.seat - hero.seat + n) % n)),
   );
   const info = $derived(tableInfo(view, settings.handHints));
@@ -55,6 +56,7 @@
   }
 
   const faceUp = (p: PlayerView) => p.holeCards.some((c) => c !== null);
+  const deadlineOf = (id: string) => (snap.turn?.playerId === id ? snap.turn.deadline : null);
 </script>
 
 <div class="clean">
@@ -101,6 +103,7 @@
             <span class="status {p.lastAction?.type ?? ''}">{status(p)}</span>
           {/if}
         </div>
+        {#if deadlineOf(p.id)}<TurnTimer deadline={deadlineOf(p.id)!} />{/if}
       </div>
     {/each}
   </section>
@@ -135,7 +138,7 @@
     </div>
   </section>
 
-  <section class="me" class:active={hero.isToAct} class:winner={(info.wonBy[HERO_ID] ?? 0) > 0} class:folded={hero.folded}>
+  <section class="me" class:active={hero.isToAct} class:winner={(info.wonBy[meId] ?? 0) > 0} class:folded={hero.folded}>
     <div class="my-cards">
       {#if hero.holeCards.length && !hero.eliminated}
         {#each hero.holeCards as c, i (i)}
@@ -143,7 +146,7 @@
             card={c}
             size="lg"
             delay={i * 90}
-            highlight={info.showdownDone && c !== null && (info.result?.hands[HERO_ID]?.best ?? []).includes(c)}
+            highlight={info.showdownDone && c !== null && (info.result?.hands[meId]?.best ?? []).includes(c)}
           />
         {/each}
       {/if}
@@ -155,10 +158,10 @@
         <span class="stack num">{hero.allIn && !hero.eliminated ? t('allin') : chips(hero.stack)}</span>
       </div>
       <div class="line">
-        {#if (info.wonBy[HERO_ID] ?? 0) > 0}
-          <span class="won num" in:pop|global>+{chips(info.wonBy[HERO_ID])}</span>
-        {:else if info.showdownDone && info.result?.hands[HERO_ID]}
-          <span class="muted">{handName(info.result.hands[HERO_ID].key)}</span>
+        {#if (info.wonBy[meId] ?? 0) > 0}
+          <span class="won num" in:pop|global>+{chips(info.wonBy[meId])}</span>
+        {:else if info.showdownDone && info.result?.hands[meId]}
+          <span class="muted">{handName(info.result.hands[meId].key)}</span>
         {:else if info.heroHint}
           <span class="hint">{info.heroHint}</span>
         {:else}
@@ -166,6 +169,7 @@
         {/if}
         {#if hero.bet > 0}<span class="bet num" in:pop|global>{chips(hero.bet)}</span>{/if}
       </div>
+      {#if deadlineOf(meId)}<TurnTimer deadline={deadlineOf(meId)!} />{/if}
     </div>
   </section>
 </div>
