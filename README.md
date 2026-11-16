@@ -22,6 +22,14 @@ lässt es sich direkt auf GitHub Pages hosten.
   Home-Bildschirm installierbar, offline spielbar
 - **Zwei Designs** (Lobby → Design): dunkler Pokertisch (Standard) oder „Clean“ – schlicht, hell oder dunkel je nach Systemeinstellung,
   ohne Tisch, mit Gegner-Kacheln. Umschaltbar jederzeit, auch im Spiel über die Einstellungen
+- **3D-Ansicht** (Lobby → Ansicht: Standard oder 3D): realistischer Pokertisch mit three.js – Filz mit
+  Holzrand, Hängelampe mit Schatten, Tiefenunschärfe, animiert gegebene und aufgedeckte Karten, Chips,
+  die zwischen Stack, Einsatz und Pot wandern, wandernder Dealer-Button. Ziehen schwenkt die Kamera,
+  zwei Finger bzw. Mausrad zoomen, Antippen eines Chipstapels blendet die Namensschilder aus/ein.
+  „Einfache 3D-Grafik“ (Einstellungen) für ältere Geräte; ohne WebGL fällt die App automatisch auf
+  die Standardansicht zurück. Engine, Bots und Bedienleiste sind in beiden Ansichten dieselben;
+  three.js wird nur geladen, wenn die 3D-Ansicht gewählt ist. Übernommen und angepasst aus
+  [jochenhammes/rubics](https://github.com/jochenhammes/rubics) (Poker-Variante)
 - **Deutsch/Englisch**, Vierfarben-Deck, synthetische Soundeffekte (keine Audiodateien),
   Handstärke-Anzeige, Spielverlauf, Spieltempo
 - **Vorauswahl-Aktionen**: Während andere am Zug sind, kannst du schon Check/Fold, Check, Fold,
@@ -32,7 +40,8 @@ lässt es sich direkt auf GitHub Pages hosten.
   über das Teilen-Menü oder per Code, freie Plätze füllen Bots, 30 s Bedenkzeit, Wiedereinstieg nach Neuladen.
   Einrichtung: [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md). Ohne Konfiguration bleibt der Modus ausgeblendet.
 - Turnier wird automatisch im Browser gespeichert und kann fortgesetzt werden
-- Klein und schnell: ca. 45 KB JS (gzip), keine Web-Fonts, keine Laufzeit-Abhängigkeiten außer Svelte
+- Klein und schnell: ca. 55 KB JS (gzip) für die Standardansicht, keine Web-Fonts; three.js (ca. 140 KB gzip)
+  nur für die 3D-Ansicht
 
 ## Entwicklung
 
@@ -61,7 +70,7 @@ src/
   game/     GameController-Schnittstelle, LocalGameController (Engine + Bots + Pacing),
             Speicherung (localStorage), Einstellungen
   i18n/     Übersetzungen (de/en)
-  ui/       Svelte-5-Komponenten
+  ui/       Svelte-5-Komponenten; ui/three: 3D-Tisch (Szene, Karten/Chips, prozedurale Texturen)
 ```
 
 ### Multiplayer

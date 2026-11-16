@@ -4,9 +4,14 @@
   import Segmented from './Segmented.svelte';
   import Toggle from './Toggle.svelte';
   import ThemePicker from './ThemePicker.svelte';
+  import ViewPicker from './ViewPicker.svelte';
 </script>
 
 <div class="settings">
+  <div class="group">
+    <div class="label">{t('view')}</div>
+    <ViewPicker />
+  </div>
   <div class="group">
     <div class="label">{t('design')}</div>
     <ThemePicker />
@@ -54,6 +59,14 @@
       hint={t('handHintsHint')}
       onChange={(v) => updateSettings({ handHints: v })}
     />
+    {#if settings.view === '3d'}
+      <Toggle
+        checked={settings.lite3d}
+        label={t('lite3d')}
+        hint={t('lite3dHint')}
+        onChange={(v) => updateSettings({ lite3d: v })}
+      />
+    {/if}
   </div>
 </div>
 
