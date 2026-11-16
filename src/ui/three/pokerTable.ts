@@ -81,12 +81,14 @@ interface Layout {
   rz: number;
   angles: number[];
   deck: [number, number, number];
+  /** Discard pile ("muck") for folded cards: x, z, heading. */
+  muck: [number, number, number];
   potZ: number;
 }
 // Eight seats clockwise, seat 0 sits in front of the screen (90°).
 export const LAYOUTS: Record<'landscape' | 'portrait', Layout> = {
-  landscape: { rx: 12.5, rz: 6.2, angles: [90, 135, 180, 225, 270, 315, 0, 45], deck: [7.8, -0.6, -Math.PI / 2], potZ: 1.9 },
-  portrait: { rx: 5.6, rz: 10, angles: [90, 130, 158, 202, 270, 338, 22, 50], deck: [0, -3.5, Math.PI / 2], potZ: 1.7 },
+  landscape: { rx: 12.5, rz: 6.2, angles: [90, 135, 180, 225, 270, 315, 0, 45], deck: [7.8, -0.6, -Math.PI / 2], muck: [-7.8, -0.6, -Math.PI / 2], potZ: 1.9 },
+  portrait: { rx: 5.6, rz: 10, angles: [90, 130, 158, 202, 270, 338, 22, 50], deck: [1.35, -3.9, 0], muck: [-1.35, -3.9, 0], potZ: 1.7 },
 };
 /** Which of the eight places are taken with n players. */
 const SLOTS: Record<number, number[]> = {
@@ -137,6 +139,10 @@ interface Step {
   ease: (t: number) => number;
   spin?: number;
   hide?: boolean;
+  /** Make the card visible again when this step starts. */
+  show?: boolean;
+  /** Put the card here (without animation) when the step ends. */
+  jumpTo?: Pose;
   from?: Pose;
 }
 interface Card3D {
@@ -145,12 +151,14 @@ interface Card3D {
   value: number | null;
   faceKey: string;
   place: string;
+  /** Position in the discard pile while the card lies there. */
+  muckSlot: number;
   sig: string;
   queue: Step[];
   now: Pose;
 }
 interface Goal {
-  place: 'deck' | 'seat' | 'board';
+  place: 'deck' | 'seat' | 'board' | 'muck';
   up: boolean;
   value: number | null;
   x: number;
@@ -224,6 +232,23 @@ export function createPokerTable(opts: {
   let layout = LAYOUTS.landscape;
   const deckPos = () => ({ x: center.x + layout.deck[0], z: center.z + layout.deck[1], heading: layout.deck[2] });
   const DECK_H = 0.38;
+  const deckPose = (): Pose => {
+    const d = deckPos();
+    return { x: d.x, y: DECK_H + 0.03, z: d.z, heading: d.heading, flip: Math.PI };
+  };
+  // Discard pile: folded cards land here face down, slightly messy, one on top of the other.
+  let muckCount = 0;
+  const muckGoal = (slot: number): Goal => ({
+    place: 'muck',
+    up: false,
+    value: null,
+    x: center.x + layout.muck[0] + (hash(slot, 7, 1) - 0.5) * 0.7,
+    y: 0.012 + slot * 0.014,
+    z: center.z + layout.muck[1] + (hash(slot, 7, 2) - 0.5) * 0.6,
+    heading: layout.muck[2] + (hash(slot, 7, 3) - 0.5) * 0.9,
+  });
+  /** Gap between collecting the old cards and dealing the new hand. */
+  const DEAL_START = 760;
   let animating = false;
 
   // ── cards ──
@@ -284,6 +309,7 @@ export function createPokerTable(opts: {
       value: null,
       faceKey: '',
       place: 'deck',
+      muckSlot: 0,
       sig: '',
       queue: [],
       now: { x: d.x, y: DECK_H + 0.03, z: d.z, heading: d.heading, flip: Math.PI },
@@ -502,6 +528,11 @@ export function createPokerTable(opts: {
 
   function aim(card: Card3D, goal: Goal, delay: number, now: number) {
     if (goal.value != null) setFace(card, goal.value);
+    // a card that is not on the table has nothing to throw away
+    if ((goal.place === 'deck' || goal.place === 'muck') && card.place === 'deck') {
+      card.sig = `deck|${goal.place}`;
+      return;
+    }
     const sig = `${goal.place}|${goal.up}|${goal.x.toFixed(2)}|${goal.z.toFixed(2)}`;
     if (sig === card.sig) return;
     const wasPlace = card.place;
@@ -512,15 +543,51 @@ export function createPokerTable(opts: {
     const pos = { x: goal.x, y: goal.y, z: goal.z, heading: goal.heading };
     if (goal.place === 'deck') {
       plan(card, [{ at, dur: 380, to: { ...pos, flip: Math.PI }, arc: 0.5, ease: easeOut, hide: true }]);
+    } else if (goal.place === 'muck') {
+      // thrown away face down onto the discard pile – never back onto the deck
+      plan(card, [{ at, dur: 420, to: { ...pos, flip: Math.PI }, arc: 0.6, ease: easeOut, spin: (hash(card.muckSlot, 3, 3) - 0.5) * 1.2 }]);
     } else if (wasPlace === 'deck') {
       // dealt face down (spinning in flight), then turned over if needed
-      const steps: Step[] = [{ at, dur: 480, to: { ...pos, flip: Math.PI }, arc: 0.7, ease: easeOut, spin: Math.PI * 2 }];
+      const steps: Step[] = [{ at, dur: 480, to: { ...pos, flip: Math.PI }, arc: 0.7, ease: easeOut, spin: Math.PI * 2, show: true }];
       if (goal.up) steps.push({ at: null, dur: 420, to: { ...pos, flip }, arc: 1.25, ease: easeInOut });
-      plan(card, steps);
+      if (card.queue.length) {
+        // the card is still being collected from the last hand: deal it afterwards
+        card.queue.push(...steps);
+        animating = true;
+      } else plan(card, steps);
     } else {
       const turning = Math.abs(card.now.flip - flip) > 0.1;
       plan(card, [{ at, dur: 420, to: { ...pos, flip }, arc: turning ? 1.25 : 0.25, ease: easeInOut }]);
     }
+  }
+
+  function toMuck(card: Card3D, now: number) {
+    if (card.place !== 'muck' && card.place !== 'deck') card.muckSlot = muckCount++;
+    aim(card, muckGoal(card.muckSlot), 0, now);
+  }
+
+  /**
+   * New hand: every card of the last hand is swept onto the discard pile, then
+   * the pile goes back under the deck (shuffled in) before the new cards are dealt.
+   */
+  function collectAll(now: number) {
+    const home = deckPose();
+    for (const card of cards.values()) {
+      if (card.place === 'deck') continue;
+      const steps: Step[] = [];
+      let gatherAt: number | null = now + 420;
+      if (card.place !== 'muck') {
+        card.muckSlot = muckCount++;
+        const g = muckGoal(card.muckSlot);
+        steps.push({ at: now, dur: 420, to: { x: g.x, y: g.y, z: g.z, heading: g.heading, flip: Math.PI }, arc: 0.6, ease: easeOut });
+        gatherAt = null;
+      }
+      steps.push({ at: gatherAt, dur: 300, to: { ...home, y: DECK_H - 0.1 }, arc: 0.3, ease: easeInOut, hide: true, jumpTo: home });
+      plan(card, steps);
+      card.place = 'deck';
+      card.sig = '';
+    }
+    muckCount = 0;
   }
 
   function seatLabelHtml(p: PlayerView, snap: GameSnapshot, handKey: CategoryKey | null, tx: LabelText) {
@@ -567,6 +634,8 @@ export function createPokerTable(opts: {
 
     // dealing order: clockwise from the seat left of the button
     const dealing = snap.events.some((e) => e.type === 'dealHole');
+    if (dealing) collectAll(now);
+    const dealStart = dealing ? DEAL_START : 0;
     const inHand = view.players.filter((p) => p.holeCards.length === 2 && !p.eliminated);
     const first = inHand.findIndex((p) => p.isSmallBlind);
     const dealOrder = new Map(inHand.map((p, i) => [p.id, (i - Math.max(0, first) + inHand.length) % inHand.length]));
@@ -575,8 +644,10 @@ export function createPokerTable(opts: {
       const seat = seats.get(p.id)!;
       for (let i = 0; i < 2; i++) {
         const card = getCard(`h${p.id}:${i}`);
-        if (p.holeCards.length !== 2 || p.eliminated || p.folded) {
-          aim(card, inDeck, 0, now);
+        // folded (or no longer dealt in): onto the discard pile. A busted player's
+        // cards stay visible until the next hand.
+        if (p.holeCards.length !== 2 || p.folded) {
+          toMuck(card, now);
           continue;
         }
         const value = p.holeCards[i],
@@ -594,7 +665,7 @@ export function createPokerTable(opts: {
             y: 0.012 + i * 0.016,
             heading: seat.heading + side * (up ? 0.07 : 0.12),
           },
-          dealing ? (i * inHand.length + (dealOrder.get(p.id) ?? 0)) * 110 : 0,
+          dealing ? dealStart + (i * inHand.length + (dealOrder.get(p.id) ?? 0)) * 110 : 0,
           now,
         );
       }
@@ -604,7 +675,8 @@ export function createPokerTable(opts: {
       const card = getCard(`b${i}`);
       const value = view.board[i];
       if (value == null) {
-        aim(card, inDeck, 0, now);
+        if (card.place === 'muck') toMuck(card, now);
+        else aim(card, inDeck, 0, now);
         continue;
       }
       const fresh = boardEvent && boardEvent.type === 'board' ? Math.max(0, boardEvent.cards.indexOf(value)) : 0;
@@ -712,7 +784,10 @@ export function createPokerTable(opts: {
       active = true;
       if (step.at == null) step.at = now;
       if (now < step.at) continue;
-      step.from ??= { ...card.now };
+      if (!step.from) {
+        step.from = { ...card.now };
+        if (step.show) card.group.visible = true;
+      }
       const raw = Math.min(1, (now - step.at) / step.dur);
       const k = step.ease(raw),
         s = card.now;
@@ -725,6 +800,7 @@ export function createPokerTable(opts: {
       if (raw >= 1) {
         s.heading = step.to.heading;
         if (step.hide) card.group.visible = false;
+        if (step.jumpTo) Object.assign(s, step.jumpTo);
         card.queue.shift();
       }
     }
