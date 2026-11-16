@@ -8,6 +8,7 @@
   import Sheet from './components/Sheet.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
   import ThemePicker from './components/ThemePicker.svelte';
+  import ViewPicker from './components/ViewPicker.svelte';
   import PlayingCard from './components/PlayingCard.svelte';
   import { makeCard } from '../engine/cards';
 
@@ -144,6 +145,11 @@
           value={blindSpeed}
           onChange={(v) => (blindSpeed = v)}
         />
+      </div>
+
+      <div class="field">
+        <span class="label">{t('view')}</span>
+        <ViewPicker />
       </div>
 
       <div class="field">

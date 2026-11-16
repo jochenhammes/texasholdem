@@ -8,6 +8,7 @@
   import { play, setSoundEnabled, unlockAudio } from './sound';
   import Table from './components/Table.svelte';
   import CleanTable from './components/CleanTable.svelte';
+  import Table3D from './components/Table3D.svelte';
   import ActionBar from './components/ActionBar.svelte';
   import Sheet from './components/Sheet.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
@@ -21,6 +22,8 @@
   }: { controller: GameController; onExit: (reason: 'lobby' | 'quit' | 'new') => void } = $props();
 
   let snap = $state<GameSnapshot | null>(null);
+  /** WebGL is not available: fall back to the standard view. */
+  let no3d = $state(false);
   let sheet = $state<'menu' | 'log' | 'settings' | null>(null);
   let toast = $state<string | null>(null);
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -209,7 +212,11 @@
     </header>
 
     <main class="stage">
-      {#if settings.theme === 'clean'}
+      {#if settings.view === '3d' && !no3d}
+        {#key settings.lite3d}
+          <Table3D {snap} onFail={() => (no3d = true)} />
+        {/key}
+      {:else if settings.theme === 'clean'}
         <CleanTable {snap} />
       {:else}
         <Table {snap} />
