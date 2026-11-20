@@ -159,6 +159,14 @@
   const view = $derived(snap?.view);
   const meId = $derived(snap?.view.viewerId ?? '');
   const mp = $derived(snap?.multiplayer ?? null);
+  // ticking clock for the "admin is gone" countdown
+  let now = $state(Date.now());
+  $effect(() => {
+    if (!snap?.adminAwayUntil) return;
+    now = Date.now();
+    const timer = setInterval(() => (now = Date.now()), 1000);
+    return () => clearInterval(timer);
+  });
   const thinkingName = $derived(snap?.thinkingId ? (view?.players.find((p) => p.id === snap!.thinkingId)?.name ?? null) : null);
   const total = $derived(view?.players.length ?? 0);
   const heroPlace = $derived(view?.placements.find((p) => p.playerId === meId)?.place ?? null);
@@ -224,6 +232,10 @@
       {/if}
       {#if snap.hostAway}
         <div class="banner" transition:fly={{ y: -16, duration: 220 }}>{t('hostAway')}</div>
+      {:else if snap.adminAwayUntil}
+        <div class="banner" transition:fly={{ y: -16, duration: 220 }}>
+          {t('adminAway', { s: Math.max(0, Math.ceil((snap.adminAwayUntil - now) / 1000)) })}
+        </div>
       {/if}
       {#if toast}
         <div class="toast" transition:fly={{ y: -16, duration: 220 }}>{toast}</div>

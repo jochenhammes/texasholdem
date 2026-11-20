@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 function make(opts: ConstructorParameters<typeof LanSession>[0] = {}) {
-  const s = new LanSession({ speed: () => 0, turnTimeMs: 200, handoverMs: 30, ...opts });
+  const s = new LanSession({ speed: () => 0, turnTimeMs: 200, byeGraceMs: 30, lostGraceMs: 300, ...opts });
   sessions.push(s);
   return s;
 }
@@ -98,7 +98,7 @@ describe('LanSession', () => {
   });
 
   it('lets absent players check/fold automatically', async () => {
-    const s = make();
+    const s = make({ lostGraceMs: 60_000 });
     const admin = client(s, 'admin-0001');
     const bob = client(s, 'bob-00001');
     s.join('bob-00001', 'Bob');
@@ -142,7 +142,7 @@ describe('LanSession', () => {
     expect(admin.last!.game!.turn!.remainingMs).toBeNull();
   });
 
-  it('hands the admin role over when the admin leaves the foyer', async () => {
+  it('hands the admin role over when the admin is gone from the foyer', async () => {
     const s = make();
     const admin = client(s, 'admin-0001');
     const bob = client(s, 'bob-00001');
@@ -150,5 +150,55 @@ describe('LanSession', () => {
     admin.disconnect();
     await until(() => !!bob.last?.you.isAdmin, 1000);
     expect(bob.last!.adminId).toBe('bob-00001');
+  });
+
+  async function runningTable() {
+    const s = make();
+    const admin = client(s, 'admin-0001');
+    const bob = client(s, 'bob-00001');
+    s.join('bob-00001', 'Bob');
+    s.updateSetup('admin-0001', { ...setup, totalPlayers: 3 });
+    s.start('admin-0001');
+    await until(() => (bob.last?.game?.view.handNumber ?? 0) >= 1);
+    return { s, admin, bob };
+  }
+
+  it('resets the tournament shortly after the admin closed the browser', async () => {
+    const { s, admin, bob } = await runningTable();
+    s.bye('admin-0001'); // beacon from pagehide, then the stream closes
+    admin.disconnect();
+    await until(() => !!bob.last?.adminAway);
+    await until(() => bob.last!.phase === 'lobby', 1000);
+    expect(bob.last!.you.isAdmin).toBe(true);
+    expect(bob.last!.members.map((m) => m.id)).toEqual(['bob-00001']);
+  });
+
+  it('keeps the tournament through short connection losses and reloads', async () => {
+    const { s, admin, bob } = await runningTable();
+    const t = bob.last!.tournament;
+    // reload: goodbye + reconnect right away
+    s.bye('admin-0001');
+    admin.disconnect();
+    const again = client(s, 'admin-0001');
+    await new Promise((r) => setTimeout(r, 80));
+    // short outage (shorter than the grace period for lost connections)
+    again.disconnect();
+    await until(() => !!bob.last?.adminAway);
+    await new Promise((r) => setTimeout(r, 150));
+    client(s, 'admin-0001');
+    await until(() => bob.last!.adminAway === null);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(bob.last!.phase).toBe('playing');
+    expect(bob.last!.tournament).toBe(t);
+    expect(bob.last!.adminId).toBe('admin-0001');
+  });
+
+  it('resets after the grace period when the admin does not come back', async () => {
+    const { admin, bob } = await runningTable();
+    admin.disconnect();
+    await new Promise((r) => setTimeout(r, 150));
+    expect(bob.last!.phase).toBe('playing');
+    await until(() => bob.last!.phase === 'lobby', 1500);
+    expect(bob.last!.you.isAdmin).toBe(true);
   });
 });

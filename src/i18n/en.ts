@@ -113,6 +113,7 @@ export const en: Record<keyof typeof de, string> = {
   timeLimitOn: '{n} seconds per decision',
   timeLimitHint: 'Then you check or fold automatically',
   secondsShort: '{n} s',
+  adminAway: 'The admin is not connected. Unless they come back, the tournament is reset in {s} s.',
   joinTable: 'Join',
   seatsInfo: '{humans} players · {bots} bots',
   connecting: 'Connecting …',

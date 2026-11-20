@@ -45,6 +45,8 @@ export interface LanMessage {
   setup: GameSetup | null;
   /** The running table, if any. */
   game: ViewPayload | null;
+  /** The admin is not connected: unless they come back, the tournament is reset in … */
+  adminAway: { resetInMs: number } | null;
 }
 
 export type LanCommand =
@@ -53,6 +55,8 @@ export type LanCommand =
   | { cmd: 'start' }
   | { cmd: 'act'; action: PlayerAction }
   | { cmd: 'leave' }
-  | { cmd: 'end' };
+  | { cmd: 'end' }
+  /** The page is being closed (sent with navigator.sendBeacon). */
+  | { cmd: 'bye' };
 
 export type LanResult = { ok: true } | { ok: false; error: 'notAdmin' | 'full' | 'badRequest' | 'notPlaying' | 'illegal' };

@@ -42,7 +42,14 @@ Ist auf Ubuntu die Firewall (ufw) aktiv, den Port einmalig freigeben: `sudo ufw 
 6. **Turnierende:** Der Admin kommt über „Neues Turnier“ zurück ins Foyer – mit denselben Spielern.
    Über das Menü kann er das Turnier jederzeit für alle beenden.
 
-Ist der Admin im Foyer länger als eine Minute nicht verbunden, übernimmt der nächste angemeldete Spieler.
+### Wenn der Admin geht
+
+- **Browser bzw. Tab geschlossen:** Nach 15 Sekunden wird das Turnier zurückgesetzt – ohne Neustart des
+  Servers. Alle landen wieder im Foyer, der nächste angemeldete Spieler wird Admin (die übrigen bleiben angemeldet).
+  Ein Neuladen der Seite zählt nicht: Der Admin ist nach einer Sekunde wieder da.
+- **Nur die Verbindung weg** (WLAN-Aussetzer, Handy im Standby, leerer Akku): Das Turnier läuft weiter, der Admin
+  checkt/foldet automatisch. Erst wenn er **2 Minuten** lang nicht zurückkommt, wird zurückgesetzt.
+- Die anderen sehen in beiden Fällen einen Hinweis mit Countdown.
 
 ## Gut zu wissen
 

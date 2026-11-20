@@ -40,6 +40,8 @@ export interface GameSnapshot {
   turn: { playerId: PlayerId; deadline: number | null } | null;
   /** Multiplayer: the host is not connected, the table waits. */
   hostAway?: boolean;
+  /** Multiplayer: the admin is not connected; the tournament is reset at this time (epoch ms) unless they return. */
+  adminAwayUntil?: number | null;
   /** Multiplayer: the host closed the table. */
   closed?: boolean;
   /** Multiplayer info for menus (null in single player). */

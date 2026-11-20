@@ -111,6 +111,7 @@ export const de = {
   timeLimitOn: '{n} Sekunden pro Entscheidung',
   timeLimitHint: 'Danach wird automatisch gecheckt bzw. gefoldet',
   secondsShort: '{n} s',
+  adminAway: 'Der Admin ist nicht verbunden. Kommt er nicht zurück, wird das Turnier in {s} s zurückgesetzt.',
   joinTable: 'Beitreten',
   seatsInfo: '{humans} Spieler · {bots} Bots',
   connecting: 'Verbinde …',

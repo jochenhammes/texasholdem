@@ -17,8 +17,14 @@ import { MAX_PLAYERS, type LanCommand, type LanMember, type LanMessage, type Lan
 /** Allowed time limits per decision (seconds); none by default. */
 export const TURN_TIME_MIN = 20;
 export const TURN_TIME_MAX = 120;
-/** An admin who stays away this long in the foyer hands over to the next player. */
-export const ADMIN_HANDOVER_MS = 60_000;
+/**
+ * When the admin is gone, the tournament is reset (the next player becomes admin):
+ * - after the browser was closed (it says goodbye): shortly – a reload reconnects well within this time;
+ * - after the connection just dropped (Wi-Fi, standby, dead battery): only after a generous grace period,
+ *   so short outages never end the tournament. Meanwhile the admin checks/folds automatically.
+ */
+export const ADMIN_BYE_GRACE_MS = 15_000;
+export const ADMIN_LOST_GRACE_MS = 120_000;
 
 const DEFAULT_SETUP: GameSetup = { playerName: '', totalPlayers: 6, difficulty: 'medium', startingStack: 1500, blindSpeed: 'normal', startLevel: 0, turnTimeSec: null };
 
@@ -26,7 +32,8 @@ export interface SessionOptions {
   decideBot?: (input: BotInput) => Promise<PlayerAction>;
   speed?: () => number;
   turnTimeMs?: number;
-  handoverMs?: number;
+  byeGraceMs?: number;
+  lostGraceMs?: number;
 }
 
 interface Member {
@@ -50,7 +57,11 @@ export class LanSession {
   private tournament = 0;
   /** Open connections per client (a client may have several tabs). */
   private conns = new Map<string, Set<Send>>();
-  private handoverTimer: ReturnType<typeof setTimeout> | null = null;
+  private resetTimer: ReturnType<typeof setTimeout> | null = null;
+  /** When the pending reset happens (epoch ms), for the countdown shown to the others. */
+  private resetAt: number | null = null;
+  /** The admin closed the browser (sent goodbye) rather than just losing the connection. */
+  private adminSaidBye = false;
   private broadcastQueued = false;
   private joinSeq = 0;
 
@@ -63,6 +74,10 @@ export class LanSession {
     let set = this.conns.get(clientId);
     if (!set) this.conns.set(clientId, (set = new Set()));
     set.add(send);
+    if (clientId === this.adminId) {
+      this.adminSaidBye = false; // back again (e.g. after a reload)
+      this.clearReset();
+    }
     if (!this.adminId) {
       this.adminId = clientId;
       this.addMember(clientId, this.setup.playerName);
@@ -96,6 +111,8 @@ export class LanSession {
         return this.leave(clientId);
       case 'end':
         return this.end(clientId);
+      case 'bye':
+        return this.bye(clientId);
       default:
         return { ok: false, error: 'badRequest' };
     }
@@ -158,7 +175,6 @@ export class LanSession {
     });
     this.game = game;
     this.tournament++;
-    this.clearHandover();
     this.broadcast();
     queueMicrotask(() => game.runner.start());
     return { ok: true };
@@ -188,9 +204,24 @@ export class LanSession {
     return { ok: true };
   }
 
+  /** Sent by the browser when the page is closed (navigator.sendBeacon). */
+  bye(clientId: string): LanResult {
+    if (clientId === this.adminId) {
+      // usually arrives just before the event stream closes; if it is closed already,
+      // restart the countdown with the short grace period
+      // Start the short countdown right away – the event stream may close a little later
+      // (or, in some browsers, only when the whole window goes). A reload reconnects
+      // within the grace period and cancels it.
+      this.adminSaidBye = true;
+      this.clearReset();
+      this.presenceChanged();
+    }
+    return { ok: true };
+  }
+
   dispose() {
     this.stopGame();
-    this.clearHandover();
+    this.clearReset();
     this.conns.clear();
   }
 
@@ -218,6 +249,7 @@ export class LanSession {
       members: this.memberList(),
       setup: this.setup,
       game,
+      adminAway: this.resetAt !== null ? { resetInMs: Math.max(0, this.resetAt - Date.now()) } : null,
     };
   }
 
@@ -252,24 +284,34 @@ export class LanSession {
 
   private presenceChanged() {
     this.game?.runner.nudge();
-    // an admin who left the foyer for good hands over after a while
-    if (!this.game && this.adminId && !this.isOnline(this.adminId)) {
-      if (!this.handoverTimer) {
-        this.handoverTimer = setTimeout(() => {
-          this.handoverTimer = null;
-          if (!this.game && this.adminId && !this.isOnline(this.adminId)) {
-            this.handOver();
-            this.broadcast();
-          }
-        }, this.opts.handoverMs ?? ADMIN_HANDOVER_MS);
-      }
-    } else this.clearHandover();
+    const adminGone = !!this.adminId && (this.adminSaidBye || !this.isOnline(this.adminId));
+    if (!adminGone) this.clearReset();
+    else if (!this.resetTimer) {
+      const ms = this.adminSaidBye ? (this.opts.byeGraceMs ?? ADMIN_BYE_GRACE_MS) : (this.opts.lostGraceMs ?? ADMIN_LOST_GRACE_MS);
+      this.resetAt = Date.now() + ms;
+      this.resetTimer = setTimeout(() => {
+        this.resetTimer = null;
+        this.resetAt = null;
+        if (this.adminId && (this.adminSaidBye || !this.isOnline(this.adminId))) this.resetTournament();
+      }, ms);
+    }
     this.broadcast();
   }
 
-  private clearHandover() {
-    if (this.handoverTimer) clearTimeout(this.handoverTimer);
-    this.handoverTimer = null;
+  private clearReset() {
+    if (this.resetTimer) clearTimeout(this.resetTimer);
+    this.resetTimer = null;
+    this.resetAt = null;
+  }
+
+  /** The admin is gone for good: end the tournament, back to the foyer with a new admin. */
+  private resetTournament() {
+    const old = this.adminId;
+    this.stopGame();
+    this.adminSaidBye = false;
+    this.handOver();
+    if (old && old !== this.adminId) this.members.delete(old);
+    this.broadcast();
   }
 
   /** The next online member (by sign-up order) becomes admin; nobody there → the next visitor. */

@@ -71,6 +71,9 @@
     </header>
 
     <section class="card-surface panel">
+      {#if msg.adminAway && !msg.you.isAdmin}
+        <p class="error">{t('adminAway', { s: Math.ceil(msg.adminAway.resetInMs / 1000) })}</p>
+      {/if}
       {#if !msg.you.member}
         <!-- not signed up yet -->
         {#if playing}

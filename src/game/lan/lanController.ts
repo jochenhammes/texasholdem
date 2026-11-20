@@ -18,6 +18,7 @@ export class LanController implements GameController {
   private deadline: { key: string; at: number | null } | null = null;
   private payload: ViewPayload | null = null;
   private isAdmin = false;
+  private adminAwayUntil: number | null = null;
   private spectating = false;
   private subs: (() => void)[] = [];
 
@@ -55,6 +56,7 @@ export class LanController implements GameController {
 
   private onMessage(m: LanMessage) {
     this.isAdmin = m.you.isAdmin;
+    this.adminAwayUntil = m.adminAway && !m.you.isAdmin ? Date.now() + m.adminAway.resetInMs : null;
     const p = m.game;
     if (!p) return;
     const first = !this.payload;
@@ -92,6 +94,7 @@ export class LanController implements GameController {
       personalities: {},
       turn: p.turn && this.deadline ? { playerId: p.turn.playerId, deadline: this.deadline.at } : null,
       hostAway: !this.conn.online,
+      adminAwayUntil: this.adminAwayUntil,
       closed: false,
       multiplayer: { room: 'LAN', isHost: this.isAdmin },
       awaitingContinue: false,

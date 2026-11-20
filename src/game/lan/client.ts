@@ -64,6 +64,9 @@ export class LanConnection {
     };
     es.onerror = () => this.setOnline(false); // EventSource reconnects by itself
     this.source = es;
+    // Closing the tab says goodbye, so the server can tell it from a short connection loss.
+    // (A reload says goodbye too – it reconnects within the grace period.)
+    window.addEventListener('pagehide', this.sayBye);
   }
 
   onMessage(run: (m: LanMessage) => void) {
@@ -90,7 +93,18 @@ export class LanConnection {
     }
   }
 
+  private sayBye = (e: PageTransitionEvent) => {
+    if (e.persisted) return; // kept in the back/forward cache, not closed
+    const body = JSON.stringify({ client: this.id, cmd: 'bye' });
+    try {
+      navigator.sendBeacon(`./${LAN_API}/command`, new Blob([body], { type: 'application/json' }));
+    } catch {
+      /* the long grace period still applies */
+    }
+  };
+
   close() {
+    window.removeEventListener('pagehide', this.sayBye);
     this.source?.close();
     this.source = null;
     this.listeners.clear();
