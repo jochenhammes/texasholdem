@@ -9,6 +9,7 @@
   import SettingsPanel from './components/SettingsPanel.svelte';
   import ThemePicker from './components/ThemePicker.svelte';
   import ViewPicker from './components/ViewPicker.svelte';
+  import Toggle from './components/Toggle.svelte';
   import PlayingCard from './components/PlayingCard.svelte';
   import { makeCard } from '../engine/cards';
   import type { LanMember } from '../game/lan/protocol';
@@ -33,6 +34,9 @@
   let startingStack = $state(last?.startingStack ?? 1500);
   let blindSpeed = $state<BlindSpeed>(last?.blindSpeed ?? 'normal');
   let startLevel = $state(last?.startLevel ?? 0);
+  // LAN only: time limit per decision (off by default)
+  let timeLimit = $state(false);
+  let timeSec = $state(Math.min(120, Math.max(20, last?.turnTimeSec ?? 30)));
   const startOptions = $derived(
     blindLevels(startingStack)
       .slice(0, START_LEVEL_CHOICES)
@@ -43,7 +47,8 @@
 
   function currentSetup(): GameSetup {
     const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel };
-    storage.saveSetup(setup);
+    if (lan) setup.turnTimeSec = timeLimit ? timeSec : null;
+    storage.saveSetup({ ...setup, turnTimeSec: timeSec });
     return setup;
   }
 
@@ -59,7 +64,7 @@
   let setupTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
     if (!lan) return;
-    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel };
+    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel, turnTimeSec: timeLimit ? timeSec : null };
     clearTimeout(setupTimer);
     setupTimer = setTimeout(() => lan.onSetupChange(setup), 250);
   });
@@ -184,6 +189,24 @@
           onChange={(v) => (blindSpeed = v)}
         />
       </div>
+
+      {#if lan}
+        <div class="field">
+          <span class="label">{t('timeLimit')}</span>
+          <Toggle
+            checked={timeLimit}
+            label={timeLimit ? t('timeLimitOn', { n: timeSec }) : t('timeLimitOff')}
+            hint={t('timeLimitHint')}
+            onChange={(v) => (timeLimit = v)}
+          />
+          {#if timeLimit}
+            <div class="time-row">
+              <input type="range" min="20" max="120" step="5" bind:value={timeSec} aria-label={t('timeLimit')} style="--p:{((timeSec - 20) / 100) * 100}%" />
+              <span class="num time-val">{t('secondsShort', { n: timeSec })}</span>
+            </div>
+          {/if}
+        </div>
+      {/if}
 
       <div class="field">
         <span class="label">{t('view')}</span>
@@ -387,6 +410,40 @@
     min-height: 56px;
     font-size: 1.05rem;
     margin-top: 4px;
+  }
+  .time-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 2px 0;
+  }
+  .time-row input[type='range'] {
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: linear-gradient(90deg, var(--raise) var(--p), var(--panel-3) var(--p));
+  }
+  .time-row input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  }
+  .time-row input[type='range']::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+  }
+  .time-val {
+    min-width: 54px;
+    text-align: right;
+    font-weight: 700;
   }
   .lan-hint {
     margin: -6px 0 0;

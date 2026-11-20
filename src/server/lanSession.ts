@@ -14,11 +14,13 @@ import { TableRunner, type GameData } from '../game/tableRunner';
 import type { GameSetup } from '../game/types';
 import { MAX_PLAYERS, type LanCommand, type LanMember, type LanMessage, type LanResult, type ViewPayload } from '../game/lan/protocol';
 
-export const TURN_TIME_MS = 30_000;
+/** Allowed time limits per decision (seconds); none by default. */
+export const TURN_TIME_MIN = 20;
+export const TURN_TIME_MAX = 120;
 /** An admin who stays away this long in the foyer hands over to the next player. */
 export const ADMIN_HANDOVER_MS = 60_000;
 
-const DEFAULT_SETUP: GameSetup = { playerName: '', totalPlayers: 6, difficulty: 'medium', startingStack: 1500, blindSpeed: 'normal', startLevel: 0 };
+const DEFAULT_SETUP: GameSetup = { playerName: '', totalPlayers: 6, difficulty: 'medium', startingStack: 1500, blindSpeed: 'normal', startLevel: 0, turnTimeSec: null };
 
 export interface SessionOptions {
   decideBot?: (input: BotInput) => Promise<PlayerAction>;
@@ -124,6 +126,7 @@ export class LanSession {
       startingStack: clampInt(setup.startingStack, 100, 1_000_000),
       blindSpeed: ['turbo', 'normal', 'slow'].includes(setup.blindSpeed) ? setup.blindSpeed : 'normal',
       startLevel: clampInt(setup.startLevel ?? 0, 0, 10),
+      turnTimeSec: setup.turnTimeSec == null ? null : clampInt(setup.turnTimeSec, TURN_TIME_MIN, TURN_TIME_MAX),
     };
     const me = this.members.get(clientId);
     if (me && this.setup.playerName) me.name = this.setup.playerName;
@@ -144,7 +147,8 @@ export class LanSession {
       decideBot: this.opts.decideBot ?? (async (input) => decideWithFallback(input)),
       speed: this.opts.speed ?? (() => 1),
       fastFactor: () => (this.humansStillInHand() ? 1 : 0.6),
-      turnTimeMs: this.opts.turnTimeMs ?? TURN_TIME_MS,
+      // no limit unless the admin set one; absent players still check/fold quickly
+      turnTimeMs: this.opts.turnTimeMs ?? (this.setup.turnTimeSec ? this.setup.turnTimeSec * 1000 : null),
       isAway: (id) => !this.isOnline(id),
       onEvents: (events) => {
         game.lastEvents = events;

@@ -12,6 +12,8 @@ export interface GameSetup {
   blindSpeed: BlindSpeed;
   /** Starting blind level (index into the blind structure, 0 = lowest). */
   startLevel?: number;
+  /** Multiplayer: seconds per decision (20–120); null/undefined = no time limit. */
+  turnTimeSec?: number | null;
 }
 
 export interface LoggedEvent {

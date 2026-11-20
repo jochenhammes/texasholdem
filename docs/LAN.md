@@ -34,7 +34,9 @@ Ist auf Ubuntu die Firewall (ufw) aktiv, den Port einmalig freigeben: `sudo ufw 
    Sie sehen „Warte auf …“ und die Einstellungen des Admins live.
 3. **Der Admin legt die Gesamtzahl der Spieler fest** (nie weniger als angemeldet) und tippt
    **„An den Tisch“** – das Turnier startet für alle. Freie Plätze übernehmen Computergegner.
-4. **Am Tisch:** 30 Sekunden Bedenkzeit pro Entscheidung, danach wird automatisch gecheckt bzw. gefoldet.
+   Optional legt er ein **Zeitlimit pro Zug** fest (Schieberegler, 20 Sekunden bis 2 Minuten; Standard: kein Limit).
+4. **Am Tisch:** Jeder wählt für sein Gerät selbst **Standard- oder 3D-Ansicht** (im Warteraum oder in den
+   Einstellungen). Ist ein Zeitlimit gesetzt, wird nach Ablauf automatisch gecheckt bzw. gefoldet.
    Wer die Seite schließt oder die Verbindung verliert, sitzt nach dem erneuten Öffnen wieder am Platz.
 5. **Später Hinzukommende** können zuschauen und sich fürs nächste Turnier anmelden.
 6. **Turnierende:** Der Admin kommt über „Neues Turnier“ zurück ins Foyer – mit denselben Spielern.

@@ -7,6 +7,7 @@
   import PlayingCard from './components/PlayingCard.svelte';
   import Sheet from './components/Sheet.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
+  import ViewPicker from './components/ViewPicker.svelte';
 
   let {
     msg,
@@ -118,7 +119,8 @@
         <p class="hint">{t('lanWaitHint')}</p>
         {#if setup}
           <p class="summary num">
-            {t('playersValue', { n: seats })} · {t(`diff_${setup.difficulty}`)} · {chips(setup.startingStack)}
+            {t('playersValue', { n: seats })} · {t(`diff_${setup.difficulty}`)} · {chips(setup.startingStack)} ·
+            {setup.turnTimeSec ? t('secondsShort', { n: setup.turnTimeSec }) : t('timeLimitOff')}
           </p>
         {/if}
       {/if}
@@ -141,6 +143,12 @@
       {#if msg.you.member && !playing}
         <button class="btn ghost block" onclick={leave}>{t('lanLeave')}</button>
       {/if}
+    </section>
+
+    <!-- every player chooses the table view for their own device -->
+    <section class="card-surface panel">
+      <span class="label">{t('view')}</span>
+      <ViewPicker />
     </section>
   </div>
 </div>

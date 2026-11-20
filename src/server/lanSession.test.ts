@@ -128,6 +128,20 @@ describe('LanSession', () => {
     expect(late.last!.members.map((m) => m.name)).toContain('Lou');
   });
 
+  it('has no time limit by default; the admin may set 20–120 s', async () => {
+    const s = new LanSession({ speed: () => 0 });
+    sessions.push(s);
+    const admin = client(s, 'admin-0001');
+    s.updateSetup('admin-0001', { ...setup, totalPlayers: 2, turnTimeSec: 5 });
+    expect(s.messageFor('admin-0001').setup!.turnTimeSec).toBe(20);
+    s.updateSetup('admin-0001', { ...setup, totalPlayers: 2, turnTimeSec: 600 });
+    expect(s.messageFor('admin-0001').setup!.turnTimeSec).toBe(120);
+    s.updateSetup('admin-0001', { ...setup, totalPlayers: 2, turnTimeSec: null });
+    s.start('admin-0001');
+    await until(() => admin.last?.game?.turn?.playerId === 'admin-0001');
+    expect(admin.last!.game!.turn!.remainingMs).toBeNull();
+  });
+
   it('hands the admin role over when the admin leaves the foyer', async () => {
     const s = make();
     const admin = client(s, 'admin-0001');
