@@ -114,6 +114,7 @@ export const en: Record<keyof typeof de, string> = {
   timeLimitHint: 'Then you check or fold automatically',
   secondsShort: '{n} s',
   adminAway: 'The admin is not connected. Unless they come back, the tournament is reset in {s} s.',
+  no3d: 'The 3D view could not start on this device – using the standard view. Tip: turn on “Simple 3D graphics” in the settings.',
   joinTable: 'Join',
   seatsInfo: '{humans} players · {bots} bots',
   connecting: 'Connecting …',

@@ -7,8 +7,9 @@
   import { tableInfo } from '../tableInfo';
   import type { Scene3D } from '../three/scene';
   import type { LabelText } from '../three/pokerTable';
+  import { reportProblem } from '../../game/lan/client';
 
-  let { snap, onFail }: { snap: GameSnapshot; onFail?: () => void } = $props();
+  let { snap, onFail }: { snap: GameSnapshot; onFail?: (reason: string) => void } = $props();
 
   let host: HTMLDivElement;
   let scene3d = $state<Scene3D | null>(null);
@@ -29,11 +30,22 @@
       const { createScene3D } = await import('../three/scene');
       if (disposed) return;
       scene3d = createScene3D(host, { lite: settings.lite3d, text, fourColor: () => settings.fourColor });
+      host.querySelector('canvas')?.addEventListener('webglcontextlost', () => fail('WebGL context lost'));
     } catch (err) {
-      console.error('3D view unavailable', err);
-      onFail?.();
+      fail(err);
     }
   });
+
+  let failed = false;
+  function fail(err: unknown) {
+    if (failed) return;
+    failed = true;
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error('3D view unavailable', err);
+    // tell the server's console which device failed and why (home network only)
+    void reportProblem(`3D: ${reason} · ${navigator.userAgent}`);
+    onFail?.(reason);
+  }
 
   onDestroy(() => {
     disposed = true;
@@ -42,7 +54,11 @@
 
   // Every snapshot (and every language / four-colour change read inside) re-syncs the table.
   $effect(() => {
-    scene3d?.setSnapshot(snap);
+    try {
+      scene3d?.setSnapshot(snap);
+    } catch (err) {
+      fail(err);
+    }
   });
 
   const info = $derived(tableInfo(snap.view, settings.handHints));

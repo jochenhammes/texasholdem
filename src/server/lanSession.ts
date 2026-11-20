@@ -113,6 +113,11 @@ export class LanSession {
         return this.end(clientId);
       case 'bye':
         return this.bye(clientId);
+      case 'log': {
+        const who = this.members.get(clientId)?.name || clientId.slice(0, 6);
+        console.warn(`  [${who}] ${String(c.text).slice(0, 500)}`);
+        return { ok: true };
+      }
       default:
         return { ok: false, error: 'badRequest' };
     }

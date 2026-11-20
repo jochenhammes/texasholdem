@@ -23,6 +23,13 @@
   let snap = $state<GameSnapshot | null>(null);
   /** WebGL is not available: fall back to the standard view. */
   let no3d = $state(false);
+  let no3dReason = $state<string | null>(null);
+  // switching the view or the graphics level tries 3D again
+  $effect(() => {
+    void settings.lite3d;
+    void settings.view;
+    no3d = false;
+  });
   let sheet = $state<'menu' | 'log' | 'settings' | null>(null);
   let toast = $state<string | null>(null);
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -223,14 +230,25 @@
     <main class="stage">
       {#if settings.view === '3d' && !no3d}
         {#key settings.lite3d}
-          <Table3D {snap} onFail={() => (no3d = true)} />
+          <Table3D
+            {snap}
+            onFail={(reason) => {
+              no3d = true;
+              no3dReason = reason;
+            }}
+          />
         {/key}
       {:else if settings.theme === 'clean'}
         <CleanTable {snap} />
       {:else}
         <Table {snap} />
       {/if}
-      {#if snap.hostAway}
+      {#if no3dReason}
+        <div class="banner" transition:fly={{ y: -16, duration: 220 }}>
+          {t('no3d')}
+          <button class="btn" onclick={() => (no3dReason = null)}>{t('close')}</button>
+        </div>
+      {:else if snap.hostAway}
         <div class="banner" transition:fly={{ y: -16, duration: 220 }}>{t('hostAway')}</div>
       {:else if snap.adminAwayUntil}
         <div class="banner" transition:fly={{ y: -16, duration: 220 }}>
@@ -381,6 +399,10 @@
     font-weight: 600;
     font-size: 0.88rem;
     box-shadow: var(--shadow), 0 0 0 1px var(--line-2);
+  }
+  .banner .btn {
+    min-height: 34px;
+    font-size: 0.85rem;
   }
   .toast {
     position: absolute;

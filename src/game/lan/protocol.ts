@@ -57,6 +57,8 @@ export type LanCommand =
   | { cmd: 'leave' }
   | { cmd: 'end' }
   /** The page is being closed (sent with navigator.sendBeacon). */
-  | { cmd: 'bye' };
+  | { cmd: 'bye' }
+  /** A problem on the device (e.g. the 3D view failed) – printed in the server console. */
+  | { cmd: 'log'; text: string };
 
 export type LanResult = { ok: true } | { ok: false; error: 'notAdmin' | 'full' | 'badRequest' | 'notPlaying' | 'illegal' };

@@ -26,7 +26,7 @@ export interface Scene3D {
 const TABLE_CENTER = new THREE.Vector3(0, 0, -4.5);
 const TABLE = { x: 17, zBack: -20, zFront: 22, rim: 1.7, rimH: 0.55 };
 const LAMP_POS = new THREE.Vector3(5.5, 16, 3);
-const CONTACT = { size: 30, height: 1.0, res: 1024, z: TABLE_CENTER.z, opacity: 0.8, spread: 1.1 };
+const CONTACT = { size: 30, height: 1.0, res: 1024 as number, z: TABLE_CENTER.z, opacity: 0.8, spread: 1.1 };
 const PORTRAIT_SHIFT = 2.5;
 const QUAD_VERTEX = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
 
@@ -37,13 +37,17 @@ export function createScene3D(stage: HTMLElement, opts: Scene3DOptions): Scene3D
   labels.className = 'labels3d';
   stage.append(canvas, labels);
 
+  // Phones (iPhone in particular) have tight limits for canvas and GPU memory: smaller
+  // textures, render targets and shadow maps there, otherwise Safari refuses the 3D view.
+  const PHONE = isPhone();
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: opts.lite,
     powerPreference: opts.lite ? 'low-power' : 'high-performance',
   });
   const LITE = opts.lite || !renderer.capabilities.isWebGL2;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, LITE ? 1.5 : 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, LITE || PHONE ? 1.5 : 2));
+  const contactRes = PHONE ? 512 : CONTACT.res;
 
   // Material with lacquer/velvet effects; plain in the simple rendering
   const material: MaterialFactory = (base, extras) =>
@@ -60,12 +64,18 @@ export function createScene3D(stage: HTMLElement, opts: Scene3DOptions): Scene3D
     const c = document.createElement('canvas');
     c.width = w;
     c.height = h;
-    draw(c.getContext('2d')!, w, h);
+    const g = c.getContext('2d');
+    if (!g) throw new Error(`canvas ${w}×${h} unavailable (memory limit)`);
+    draw(g, w, h);
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(repeatX, repeatY);
     tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
+    // Upload to the GPU right away and give the canvas memory back – Safari counts
+    // all canvases of a page against a fixed limit.
+    renderer.initTexture(tex);
+    c.width = c.height = 1;
     textures.push(tex);
     return tex;
   };
@@ -106,7 +116,7 @@ export function createScene3D(stage: HTMLElement, opts: Scene3DOptions): Scene3D
   lamp.target.position.set(0, 0, TABLE_CENTER.z);
   lamp.castShadow = !LITE;
   // many small shadow casters: finer resolution, sharper
-  lamp.shadow.mapSize.set(2048, 2048);
+  lamp.shadow.mapSize.set(PHONE ? 1024 : 2048, PHONE ? 1024 : 2048);
   lamp.shadow.radius = 2.5;
   lamp.shadow.blurSamples = 8;
   lamp.shadow.bias = -0.0006;
@@ -179,7 +189,7 @@ export function createScene3D(stage: HTMLElement, opts: Scene3DOptions): Scene3D
   // ── post-processing: depth of field, vignette, tone mapping ──
   const target = LITE
     ? null
-    : new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4, depthTexture: new THREE.DepthTexture(4, 4) });
+    : new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: PHONE ? 0 : 4, depthTexture: new THREE.DepthTexture(4, 4) });
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
   const quadScene = new THREE.Scene().add(quad);
   const quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -251,7 +261,7 @@ export function createScene3D(stage: HTMLElement, opts: Scene3DOptions): Scene3D
   const contact = LITE
     ? null
     : (() => {
-        const rt = () => new THREE.WebGLRenderTarget(CONTACT.res, CONTACT.res);
+        const rt = () => new THREE.WebGLRenderTarget(contactRes, contactRes);
         const cam = new THREE.OrthographicCamera(-CONTACT.size / 2, CONTACT.size / 2, CONTACT.size / 2, -CONTACT.size / 2, 0, CONTACT.height);
         cam.rotation.x = Math.PI / 2;
         cam.position.z = CONTACT.z;
@@ -303,7 +313,7 @@ export function createScene3D(stage: HTMLElement, opts: Scene3DOptions): Scene3D
     renderer.render(scene, contact.cam);
     scene.overrideMaterial = null;
     scene.background = background;
-    const step = CONTACT.spread / CONTACT.res;
+    const step = CONTACT.spread / contactRes;
     for (let pass = 0; pass < 2; pass++) {
       contact.blur.uniforms.tex.value = contact.a.texture;
       contact.blur.uniforms.dir.value.set(step, 0);
@@ -322,6 +332,7 @@ export function createScene3D(stage: HTMLElement, opts: Scene3DOptions): Scene3D
     material,
     canvasTexture,
     lite: LITE,
+    res: LITE || PHONE ? 1 : 2,
     center: TABLE_CENTER,
     labels,
     text: opts.text,
@@ -385,7 +396,8 @@ export function createScene3D(stage: HTMLElement, opts: Scene3DOptions): Scene3D
       const far = camera.position.distanceTo(focusPoint.set(0, 0, TABLE_CENTER.z - 3));
       u.focus.value = (near + far) / 2;
       u.range.value = Math.abs(far - near) / 2 + 2.5;
-      u.strength.value = size.y * 0.018;
+      // phones: no depth of field – small screen, and it saves the GPU
+      u.strength.value = PHONE ? 0 : size.y * 0.018;
       u.maxBlur.value = size.y * 0.007;
     }
     dirty = true;
@@ -523,4 +535,13 @@ export function createScene3D(stage: HTMLElement, opts: Scene3DOptions): Scene3D
       labels.remove();
     },
   };
+}
+
+/** Small touch screen (phone): use the memory-saving settings. */
+function isPhone() {
+  try {
+    return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600;
+  } catch {
+    return false;
+  }
 }

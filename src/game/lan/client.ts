@@ -40,6 +40,19 @@ export async function detectLan(timeoutMs = 1500): Promise<boolean> {
   }
 }
 
+/** Send a problem report to the LAN server's console (silently ignored without a server). */
+export async function reportProblem(text: string) {
+  try {
+    await fetch(`./${LAN_API}/command`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client: clientId(), cmd: 'log', text: text.slice(0, 500) }),
+    });
+  } catch {
+    /* no server */
+  }
+}
+
 export class LanConnection {
   readonly id = clientId();
   private source: EventSource | null = null;

@@ -216,6 +216,8 @@ export function createPokerTable(opts: {
   material: MaterialFactory;
   canvasTexture: TextureFactory;
   lite: boolean;
+  /** Texture resolution factor (1 = phones / simple graphics, 2 = full). */
+  res?: number;
   center: THREE.Vector3;
   labels: HTMLElement;
   text: () => LabelText;
@@ -228,7 +230,7 @@ export function createPokerTable(opts: {
     mesh.layers.enable(1); // for the contact-shadow camera
     return mesh;
   };
-  const res = lite ? 1 : 2; // texture resolution
+  const res = opts.res ?? (lite ? 1 : 2); // texture resolution
   let layout = LAYOUTS.landscape;
   const deckPos = () => ({ x: center.x + layout.deck[0], z: center.z + layout.deck[1], heading: layout.deck[2] });
   const DECK_H = 0.38;
