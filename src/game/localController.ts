@@ -6,15 +6,13 @@ import { makeTournamentConfig } from '../engine/tournament';
 import type { GameEvent, PlayerAction, SeatPlayer } from '../engine/types';
 import { toView } from '../engine/view';
 import { storage, type SavedGame } from './storage';
+import { BOT_NAMES } from './botNames';
 import { TableRunner, type GameData } from './tableRunner';
 import type { GameController, GameSetup, GameSnapshot } from './types';
 
 export const HERO_ID = 'hero';
 
-export const BOT_NAMES = [
-  'Ava', 'Ben', 'Chen', 'Dana', 'Emil', 'Fiona', 'Gus', 'Hana', 'Ivo', 'Jule', 'Kai', 'Lena',
-  'Milo', 'Nora', 'Otto', 'Pia', 'Quinn', 'Rosa', 'Sam', 'Tara', 'Uli', 'Vera', 'Wes', 'Yara', 'Zoe',
-];
+export { BOT_NAMES };
 
 export interface Pacing {
   /** Delay multiplier (1 = normal, < 1 = faster). Read on every step so settings apply live. */

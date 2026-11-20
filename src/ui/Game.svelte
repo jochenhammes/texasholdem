@@ -222,12 +222,7 @@
       {:else}
         <Table {snap} />
       {/if}
-      {#if snap.closed}
-        <div class="banner" transition:fly={{ y: -16, duration: 220 }}>
-          {t('tableClosed')}
-          <button class="btn primary" onclick={() => onExit('quit')}>{t('backToLobby')}</button>
-        </div>
-      {:else if snap.hostAway}
+      {#if snap.hostAway}
         <div class="banner" transition:fly={{ y: -16, duration: 220 }}>{t('hostAway')}</div>
       {/if}
       {#if toast}
@@ -374,10 +369,6 @@
     font-weight: 600;
     font-size: 0.88rem;
     box-shadow: var(--shadow), 0 0 0 1px var(--line-2);
-  }
-  .banner .btn {
-    min-height: 36px;
-    font-size: 0.85rem;
   }
   .toast {
     position: absolute;

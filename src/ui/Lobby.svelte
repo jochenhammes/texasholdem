@@ -11,25 +11,20 @@
   import ViewPicker from './components/ViewPicker.svelte';
   import PlayingCard from './components/PlayingCard.svelte';
   import { makeCard } from '../engine/cards';
-  import { multiplayerAvailable } from '../config';
-  import { normalizeCode } from '../game/mp/room';
+  import type { LanMember } from '../game/lan/protocol';
 
   let {
     saved,
     onStart,
     onResume,
-    onFriends,
-    onJoinCode,
+    lan = null,
   }: {
     saved: SavedGame | null;
     onStart: (s: GameSetup) => void;
     onResume: () => void;
-    onFriends: (s: GameSetup) => void;
-    onJoinCode: (code: string) => void;
+    /** Home-network tournament: this browser is the admin; the others are listed here. */
+    lan?: { members: LanMember[]; onSetupChange: (s: GameSetup) => void } | null;
   } = $props();
-  let joinCode = $state('');
-  let showJoin = $state(false);
-  const codeValid = $derived(normalizeCode(joinCode) !== null);
 
   const last = storage.loadSetup();
   let name = $state(last?.playerName ?? '');
@@ -55,6 +50,19 @@
   function start() {
     onStart(currentSetup());
   }
+
+  // LAN: never fewer seats than signed-up players; the others see the admin's settings live
+  const minPlayers = $derived(lan ? Math.max(2, lan.members.length) : 2);
+  $effect(() => {
+    if (totalPlayers < minPlayers) totalPlayers = Math.min(8, minPlayers);
+  });
+  let setupTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    if (!lan) return;
+    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel };
+    clearTimeout(setupTimer);
+    setupTimer = setTimeout(() => lan.onSetupChange(setup), 250);
+  });
 
   const savedInfo = $derived.by(() => {
     if (!saved) return null;
@@ -89,7 +97,7 @@
       </button>
     </header>
 
-    {#if saved}
+    {#if saved && !lan}
       <button class="resume card-surface" onclick={onResume}>
         <span class="resume-text">
           <span class="resume-title">{t('resume')}</span>
@@ -100,7 +108,19 @@
     {/if}
 
     <section class="card-surface setup">
-      <h2>{t('newTournament')}</h2>
+      <h2>{lan ? t('lanTournament') : t('newTournament')}</h2>
+      {#if lan}
+        <p class="lan-hint">{t('lanAdminHint')}</p>
+        <ul class="members">
+          {#each lan.members as m (m.id)}
+            <li class:off={!m.online}>
+              <span class="dot-online" aria-hidden="true"></span>
+              <span class="mname">{m.isAdmin ? name.trim() || t('you') : m.name}</span>
+              {#if m.isAdmin}<span class="tag-admin">{t('admin')}</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
 
       <label class="field">
         <span class="label">{t('yourName')}</span>
@@ -110,14 +130,15 @@
       <div class="field">
         <span class="label">{t('players')}</span>
         <div class="stepper">
-          <button class="icon-btn" aria-label="-" disabled={totalPlayers <= 2} onclick={() => totalPlayers--}>−</button>
+          <button class="icon-btn" aria-label="-" disabled={totalPlayers <= minPlayers} onclick={() => totalPlayers--}>−</button>
           <div class="seats" aria-live="polite">
             <div class="dots">
               {#each Array(8) as _, i (i)}
-                <span class="dot" class:on={i < totalPlayers} class:me={i === 0}></span>
+                <span class="dot" class:on={i < totalPlayers} class:me={i === 0} class:human={!!lan && i > 0 && i < lan.members.length}></span>
               {/each}
             </div>
             <span class="count">{t('playersValue', { n: totalPlayers })}</span>
+            {#if lan}<span class="sub-count">{t('seatsInfo', { humans: Math.min(totalPlayers, lan.members.length), bots: Math.max(0, totalPlayers - lan.members.length) })}</span>{/if}
           </div>
           <button class="icon-btn" aria-label="+" disabled={totalPlayers >= 8} onclick={() => totalPlayers++}>+</button>
         </div>
@@ -174,36 +195,10 @@
         <ThemePicker />
       </div>
 
-      <button class="btn primary block start" onclick={start}>{t('start')}</button>
-      {#if multiplayerAvailable}
-        <button class="btn block friends" onclick={() => onFriends(currentSetup())}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-            ><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="17" cy="9" r="2.6" /><path d="M16 14.2c2.8.2 5 2.6 5 5.8" /></svg
-          >
-          {t('playWithFriends')}
-        </button>
-        {#if showJoin}
-          <div class="join-row">
-            <input
-              type="text"
-              class="code-input num"
-              bind:value={joinCode}
-              maxlength="7"
-              placeholder="K7QX92"
-              autocapitalize="characters"
-              autocomplete="off"
-              aria-label={t('roomCode')}
-              onkeydown={(e) => e.key === 'Enter' && codeValid && onJoinCode(normalizeCode(joinCode)!)}
-            />
-            <button class="btn primary" disabled={!codeValid} onclick={() => onJoinCode(normalizeCode(joinCode)!)}>{t('joinTable')}</button>
-          </div>
-        {:else}
-          <button class="link-btn" onclick={() => (showJoin = true)}>{t('joinWithCode')}</button>
-        {/if}
-      {/if}
+      <button class="btn primary block start" onclick={start}>{lan ? t('toTable') : t('start')}</button>
     </section>
 
-    {#if stats.tournaments > 0 || stats.handsPlayed > 0}
+    {#if !lan && (stats.tournaments > 0 || stats.handsPlayed > 0)}
       <section class="stats">
         <div><span class="v num">{stats.tournaments}</span><span class="k">{t('statTournaments')}</span></div>
         <div><span class="v num">{stats.wins}</span><span class="k">{t('statWins')}</span></div>
@@ -393,34 +388,54 @@
     font-size: 1.05rem;
     margin-top: 4px;
   }
-  .friends {
-    min-height: 52px;
-    margin-top: -6px;
-  }
-  .friends svg {
-    width: 20px;
-    height: 20px;
-  }
-  .link-btn {
-    align-self: center;
-    font-size: 0.88rem;
-    font-weight: 600;
+  .lan-hint {
+    margin: -6px 0 0;
+    font-size: 0.85rem;
     color: var(--text-2);
-    padding: 6px 10px;
-    margin-top: -8px;
   }
-  .join-row {
+  .members {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: flex;
-    gap: 8px;
-    margin-top: -6px;
+    flex-wrap: wrap;
+    gap: 6px;
   }
-  .code-input {
-    flex: 1;
-    min-width: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    font-weight: 700;
-    text-align: center;
+  .members li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .members li.off {
+    opacity: 0.5;
+  }
+  .dot-online {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .members li.off .dot-online {
+    background: var(--text-3);
+  }
+  .tag-admin {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--panel-3);
+    color: var(--text-2);
+  }
+  .sub-count {
+    font-size: 0.75rem;
+    color: var(--text-3);
+  }
+  .dot.human {
+    background: var(--raise);
   }
   .stats {
     display: grid;
