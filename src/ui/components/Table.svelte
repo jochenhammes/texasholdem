@@ -44,7 +44,7 @@
     }),
   );
 
-  const info = $derived(tableInfo(view, settings.handHints));
+  const info = $derived(tableInfo(view, settings.handHints, settings.winChance));
   const { result, showdownDone, wonBy, bestCards, winnerLine, heroHint, potLabel } = $derived(info);
 </script>
 

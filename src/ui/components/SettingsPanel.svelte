@@ -59,6 +59,12 @@
       hint={t('handHintsHint')}
       onChange={(v) => updateSettings({ handHints: v })}
     />
+    <Toggle
+      checked={settings.winChance}
+      label={t('winChance')}
+      hint={t('winChanceHint')}
+      onChange={(v) => updateSettings({ winChance: v })}
+    />
     {#if settings.view === '3d'}
       <Toggle
         checked={settings.lite3d}

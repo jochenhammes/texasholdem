@@ -9,6 +9,8 @@ export interface Settings {
   sound: boolean;
   animSpeed: AnimSpeed;
   handHints: boolean;
+  /** Show the own chance to win the hand (Monte Carlo against random hands). Off by default. */
+  winChance: boolean;
   /** Stop after every showdown with the cards face up until the player continues. */
   pauseAtShowdown: boolean;
   theme: Theme;
@@ -18,7 +20,7 @@ export interface Settings {
 }
 
 const KEY = 'holdem.settings.v1';
-const DEFAULTS: Settings = { fourColor: false, sound: true, animSpeed: 'normal', handHints: true, theme: 'table', pauseAtShowdown: true, view: '2d', lite3d: false };
+const DEFAULTS: Settings = { fourColor: false, sound: true, animSpeed: 'normal', handHints: true, winChance: false, theme: 'table', pauseAtShowdown: true, view: '2d', lite3d: false };
 
 function load(): Settings {
   try {

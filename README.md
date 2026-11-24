@@ -32,6 +32,8 @@ lässt es sich direkt auf GitHub Pages hosten.
   [jochenhammes/rubics](https://github.com/jochenhammes/rubics) (Poker-Variante)
 - **Deutsch/Englisch**, Vierfarben-Deck, synthetische Soundeffekte (keine Audiodateien),
   Handstärke-Anzeige, Spielverlauf, Spieltempo
+- **Gewinnchance-Anzeige** (optional, Einstellungen): deine Chance, die Hand zu gewinnen, z. B. „63 % Gewinnchance“ –
+  Monte-Carlo gegen zufällige Hände der Gegner im Spiel, nutzt nur deine eigenen Karten und das Board
 - **Vorauswahl-Aktionen**: Während andere am Zug sind, kannst du schon Check/Fold, Check, Fold,
   Call, Call Any oder Raise vormerken. Betragsgebundene Vorauswahlen verfallen, wenn sich der
   Einsatz ändert

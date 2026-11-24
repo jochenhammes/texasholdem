@@ -24,7 +24,7 @@
       .filter((p) => p.id !== HERO_ID)
       .sort((a, b) => ((a.seat - hero.seat + n) % n) - ((b.seat - hero.seat + n) % n)),
   );
-  const info = $derived(tableInfo(view, settings.handHints));
+  const info = $derived(tableInfo(view, settings.handHints, settings.winChance));
 
   function role(p: PlayerView): string | null {
     if (p.eliminated) return null;

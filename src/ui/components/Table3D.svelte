@@ -45,7 +45,7 @@
     scene3d?.setSnapshot(snap);
   });
 
-  const info = $derived(tableInfo(snap.view, settings.handHints));
+  const info = $derived(tableInfo(snap.view, settings.handHints, settings.winChance));
 </script>
 
 <div class="table3d" bind:this={host}>
