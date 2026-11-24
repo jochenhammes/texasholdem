@@ -36,6 +36,7 @@
   let startLevel = $state(last?.startLevel ?? 0);
   // LAN only: time limit per decision (off by default)
   let timeLimit = $state(false);
+  let winChance = $state(false);
   let timeSec = $state(Math.min(120, Math.max(20, last?.turnTimeSec ?? 30)));
   const startOptions = $derived(
     blindLevels(startingStack)
@@ -47,7 +48,10 @@
 
   function currentSetup(): GameSetup {
     const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel };
-    if (lan) setup.turnTimeSec = timeLimit ? timeSec : null;
+    if (lan) {
+      setup.turnTimeSec = timeLimit ? timeSec : null;
+      setup.winChance = winChance;
+    }
     storage.saveSetup({ ...setup, turnTimeSec: timeSec });
     return setup;
   }
@@ -64,7 +68,7 @@
   let setupTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
     if (!lan) return;
-    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel, turnTimeSec: timeLimit ? timeSec : null };
+    const setup: GameSetup = { playerName: name.trim(), totalPlayers, difficulty, startingStack, blindSpeed, startLevel, turnTimeSec: timeLimit ? timeSec : null, winChance };
     clearTimeout(setupTimer);
     setupTimer = setTimeout(() => lan.onSetupChange(setup), 250);
   });
@@ -208,6 +212,13 @@
         </div>
       {/if}
 
+      {#if lan}
+        <div class="field">
+          <span class="label">{t('winChance')}</span>
+          <Toggle checked={winChance} label={t('winChanceLan')} hint={t('winChanceLanHint')} onChange={(v) => (winChance = v)} />
+        </div>
+      {/if}
+
       <div class="field">
         <span class="label">{t('view')}</span>
         <ViewPicker />
@@ -239,7 +250,7 @@
 
 {#if showSettings}
   <Sheet title={t('settings')} onClose={() => (showSettings = false)}>
-    <SettingsPanel />
+    <SettingsPanel sharedTable={!!lan} />
     <button class="btn block done" onclick={() => (showSettings = false)}>{t('done')}</button>
   </Sheet>
 {/if}

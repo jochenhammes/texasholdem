@@ -201,4 +201,18 @@ describe('LanSession', () => {
     await until(() => bob.last!.phase === 'lobby', 1500);
     expect(bob.last!.you.isAdmin).toBe(true);
   });
+
+  it('lets the admin decide on the win-chance display for everybody', async () => {
+    const s = make();
+    const admin = client(s, 'admin-0001');
+    const bob = client(s, 'bob-00001');
+    s.join('bob-00001', 'Bob');
+    expect(s.messageFor('admin-0001').setup!.winChance).toBe(false);
+    s.updateSetup('admin-0001', { ...setup, totalPlayers: 3, winChance: true });
+    s.start('admin-0001');
+    await until(() => !!bob.last?.game);
+    expect(bob.last!.game!.winChance).toBe(true);
+    expect(admin.last!.game!.winChance).toBe(true);
+    expect(s.updateSetup('bob-00001', { ...setup, winChance: false })).toEqual({ ok: false, error: 'notAdmin' });
+  });
 });

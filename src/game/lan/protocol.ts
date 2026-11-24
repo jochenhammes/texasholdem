@@ -24,6 +24,8 @@ export interface ViewPayload {
   /** The most recent log entries – merge by id. */
   log: LoggedEvent[];
   thinkingId: string | null;
+  /** Win-chance display allowed by the admin for this tournament. */
+  winChance: boolean;
   turn: { playerId: string; remainingMs: number | null } | null;
 }
 

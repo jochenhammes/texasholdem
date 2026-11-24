@@ -158,7 +158,7 @@
 
 {#if showSettings}
   <Sheet title={t('settings')} onClose={() => (showSettings = false)}>
-    <SettingsPanel />
+    <SettingsPanel sharedTable />
     <button class="btn block done" onclick={() => (showSettings = false)}>{t('done')}</button>
   </Sheet>
 {/if}

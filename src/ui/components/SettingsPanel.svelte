@@ -1,4 +1,6 @@
 <script lang="ts">
+  /** At a shared table the admin decides on the win-chance display, not the player. */
+  let { sharedTable = false }: { sharedTable?: boolean } = $props();
   import { settings, updateSettings, type AnimSpeed } from '../../game/settings.svelte';
   import { i18n, setLocale, t, type Locale } from '../../i18n/index.svelte';
   import Segmented from './Segmented.svelte';
@@ -59,6 +61,14 @@
       hint={t('handHintsHint')}
       onChange={(v) => updateSettings({ handHints: v })}
     />
+    {#if !sharedTable}
+    <Toggle
+      checked={settings.winChance}
+      label={t('winChance')}
+      hint={t('winChanceHint')}
+      onChange={(v) => updateSettings({ winChance: v })}
+    />
+    {/if}
     {#if settings.view === '3d'}
       <Toggle
         checked={settings.lite3d}

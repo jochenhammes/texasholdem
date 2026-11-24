@@ -95,6 +95,7 @@ export class LanController implements GameController {
       turn: p.turn && this.deadline ? { playerId: p.turn.playerId, deadline: this.deadline.at } : null,
       hostAway: !this.conn.online,
       adminAwayUntil: this.adminAwayUntil,
+      winChanceMode: p.winChance,
       closed: false,
       multiplayer: { room: 'LAN', isHost: this.isAdmin },
       awaitingContinue: false,

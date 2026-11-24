@@ -14,6 +14,8 @@ export interface GameSetup {
   startLevel?: number;
   /** Multiplayer: seconds per decision (20–120); null/undefined = no time limit. */
   turnTimeSec?: number | null;
+  /** Multiplayer: the admin decides whether everybody sees their win chance. */
+  winChance?: boolean;
 }
 
 export interface LoggedEvent {
@@ -40,6 +42,8 @@ export interface GameSnapshot {
   turn: { playerId: PlayerId; deadline: number | null } | null;
   /** Multiplayer: the host is not connected, the table waits. */
   hostAway?: boolean;
+  /** Multiplayer: the admin's decision on the win-chance display (overrides the personal setting). */
+  winChanceMode?: boolean;
   /** Multiplayer: the admin is not connected; the tournament is reset at this time (epoch ms) unless they return. */
   adminAwayUntil?: number | null;
   /** Multiplayer: the host closed the table. */

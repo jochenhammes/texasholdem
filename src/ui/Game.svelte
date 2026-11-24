@@ -291,7 +291,7 @@
     </Sheet>
   {:else if sheet === 'settings'}
     <Sheet title={t('settings')} onClose={closeSheet}>
-      <SettingsPanel />
+      <SettingsPanel sharedTable={!!mp} />
       <button class="btn block done" onclick={closeSheet}>{t('done')}</button>
     </Sheet>
   {:else if sheet === 'log'}

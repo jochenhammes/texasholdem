@@ -3,6 +3,7 @@ import { describeHand } from '../engine/evaluator';
 import type { HandResult } from '../engine/types';
 import type { TableView } from '../engine/view';
 import { chips, handName, t } from '../i18n/index.svelte';
+import { winChance } from './winChance';
 
 /** Display information shared by every table design (derived from the player view only). */
 export interface TableInfo {
@@ -15,7 +16,7 @@ export interface TableInfo {
   heroHint: string | null;
 }
 
-export function tableInfo(view: TableView, handHints: boolean): TableInfo {
+export function tableInfo(view: TableView, handHints: boolean, showChance = false): TableInfo {
   const me = view.viewerId;
   const result = view.phase === 'handComplete' || view.phase === 'tournamentComplete' ? view.lastResult : null;
   const wonBy: Record<string, number> = {};
@@ -47,6 +48,13 @@ export function tableInfo(view: TableView, handHints: boolean): TableInfo {
       if (view.board.length >= 3) heroHint = handName(describeHand([...cards, ...view.board]).key);
       else if (rankOf(cards[0]) === rankOf(cards[1])) heroHint = handName('pair');
     }
+  }
+
+  // optional: own chance to win, e.g. "63 %"
+  const chance = showChance ? winChance(view) : null;
+  if (chance !== null) {
+    const text = t('winChanceValue', { n: chance });
+    heroHint = heroHint ? `${heroHint} · ${text}` : text;
   }
 
   return {

@@ -61,7 +61,7 @@
     }
   });
 
-  const info = $derived(tableInfo(snap.view, settings.handHints));
+  const info = $derived(tableInfo(snap.view, settings.handHints, snap.winChanceMode ?? settings.winChance));
 </script>
 
 <div class="table3d" bind:this={host}>

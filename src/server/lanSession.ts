@@ -26,7 +26,7 @@ export const TURN_TIME_MAX = 120;
 export const ADMIN_BYE_GRACE_MS = 15_000;
 export const ADMIN_LOST_GRACE_MS = 120_000;
 
-const DEFAULT_SETUP: GameSetup = { playerName: '', totalPlayers: 6, difficulty: 'medium', startingStack: 1500, blindSpeed: 'normal', startLevel: 0, turnTimeSec: null };
+const DEFAULT_SETUP: GameSetup = { playerName: '', totalPlayers: 6, difficulty: 'medium', startingStack: 1500, blindSpeed: 'normal', startLevel: 0, turnTimeSec: null, winChance: false };
 
 export interface SessionOptions {
   decideBot?: (input: BotInput) => Promise<PlayerAction>;
@@ -148,6 +148,7 @@ export class LanSession {
       startingStack: clampInt(setup.startingStack, 100, 1_000_000),
       blindSpeed: ['turbo', 'normal', 'slow'].includes(setup.blindSpeed) ? setup.blindSpeed : 'normal',
       startLevel: clampInt(setup.startLevel ?? 0, 0, 10),
+      winChance: setup.winChance === true,
       turnTimeSec: setup.turnTimeSec == null ? null : clampInt(setup.turnTimeSec, TURN_TIME_MIN, TURN_TIME_MAX),
     };
     const me = this.members.get(clientId);
@@ -243,6 +244,7 @@ export class LanSession {
         events: g.lastEvents,
         log: g.data.log.slice(-30),
         thinkingId: g.runner.thinkingId,
+        winChance: g.data.setup.winChance === true,
         turn: turn ? { playerId: turn.playerId, remainingMs: turn.deadline === null ? null : Math.max(0, turn.deadline - Date.now()) } : null,
       };
     }
